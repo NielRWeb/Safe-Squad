@@ -1,0 +1,430 @@
+/* =========================================================
+   SAFE SQUAD — Game Hub screen
+   ========================================================= */
+
+.hub {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(180deg, #0f2b52 0%, #1c5c8f 38%, #2a90b5 62%, #64c7c0 100%);
+}
+
+/* Illustrated parallax background (SVG injected from src/art) */
+.hub__sky {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.hub__sky svg {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  object-fit: cover;
+}
+
+.hub__inner {
+  position: relative;
+  z-index: 2;
+  min-height: 100%;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: calc(14px + var(--sat)) calc(16px + var(--sar)) calc(28px + var(--sab))
+    calc(16px + var(--sal));
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ---------- Top bar ---------- */
+.hub__topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hub__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.hub__logo {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+.hub__brandtext {
+  min-width: 0;
+  overflow: hidden;
+}
+.hub__brandtext strong {
+  display: block;
+  color: #fff;
+  font-size: clamp(0.98rem, 0.9rem + 0.9vw, 1.4rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.32);
+}
+.hub__brandtext span {
+  display: block;
+  color: #bff3ea;
+  font-size: 0.66rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ---------- Hero ---------- */
+.hub__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(92px, 26vw, 150px);
+  gap: 12px;
+  align-items: center;
+  background: rgba(8, 20, 40, 0.42);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--r-xl);
+  padding: 16px;
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-card);
+}
+.hub__herotext h1 {
+  color: #fff;
+  font-size: clamp(1.28rem, 0.95rem + 2.6vw, 2.9rem);
+  font-weight: 900;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.16);
+  margin-bottom: 8px;
+}
+.hub__herotext h1 em {
+  font-style: normal;
+  color: var(--sun);
+}
+.hub__herotext p {
+  color: #d9ecff;
+  font-size: clamp(0.86rem, 0.8rem + 0.5vw, 1.12rem);
+  font-weight: 600;
+  max-width: 52ch;
+  text-wrap: pretty;
+}
+.hub__mascot {
+  width: 100%;
+  align-self: end;
+  margin: 0 auto;
+  animation: float-y 4.2s ease-in-out infinite;
+}
+.hub__herobadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.hub__badge svg {
+  width: 15px;
+  height: 15px;
+}
+.hub__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  color: #eaf7ff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+}
+
+/* ---------- Section heading ---------- */
+.hub__sectionhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: #fff;
+  padding: 0 4px;
+}
+.hub__sectionhead h2 {
+  font-size: clamp(1.1rem, 1rem + 1vw, 1.5rem);
+  font-weight: 900;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.hub__sectionhead span {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #bff3ea;
+}
+
+/* ---------- Game cards ---------- */
+.hub__cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.gcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background: var(--paper);
+  border: 0;
+  border-radius: var(--r-xl);
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+  box-shadow: 0 8px 0 rgba(9, 20, 40, 0.28), var(--shadow-card);
+  transition: transform 0.18s cubic-bezier(0.22, 1.3, 0.4, 1), box-shadow 0.18s ease;
+}
+.gcard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 13px 0 rgba(9, 20, 40, 0.28), var(--shadow-pop);
+}
+.gcard:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 rgba(9, 20, 40, 0.28), var(--shadow-soft);
+}
+.gcard__main {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.gcard__foot {
+  padding: 0 16px 12px;
+  display: flex;
+  justify-content: flex-start;
+  border-top: 2px solid var(--line);
+  margin-top: 2px;
+  padding-top: 4px;
+}
+.gcard__art {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #dff3ff;
+}
+.gcard__art svg {
+  width: 100%;
+  height: 100%;
+}
+.gcard__tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(9, 20, 40, 0.82);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 11px;
+  border-radius: var(--r-pill);
+}
+.gcard__num {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: #06231f;
+  background: var(--sun);
+  box-shadow: 0 3px 0 var(--sun-deep);
+}
+.gcard__body {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.gcard__body h3 {
+  font-size: clamp(1.1rem, 1rem + 0.8vw, 1.3rem);
+  font-weight: 900;
+}
+.gcard__body p {
+  font-size: 0.93rem;
+  color: var(--ink-soft);
+  text-wrap: pretty;
+  flex: 1;
+}
+.gcard__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.gcard__pill {
+  font-size: 0.74rem;
+  font-weight: 900;
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+  background: #eef3fa;
+  color: var(--ink-soft);
+}
+.gcard__pill--best {
+  background: #fff3d4;
+  color: #8a6100;
+}
+.gcard__cta {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.gcard__play {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  background: var(--mint);
+  color: #06231f;
+  padding: 11px 18px;
+  border-radius: var(--r-pill);
+  box-shadow: 0 4px 0 var(--mint-dark);
+  font-size: 0.98rem;
+}
+.gcard__how {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 0.88rem;
+  color: var(--mint-dark);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 12px 10px;
+  min-height: 44px;
+  border-radius: 10px;
+  touch-action: manipulation;
+}
+
+/* ---------- Footer / actions ---------- */
+.hub__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.hub__actions .btn {
+  flex: 1 1 150px;
+}
+.hub__foot {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 0 8px;
+  line-height: 1.6;
+}
+.hub__progresscard {
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--shadow-card);
+}
+.hub__progresscard svg {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+}
+.hub__progressbars {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hub__prow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.hub__prow span:first-child {
+  flex: 0 0 auto;
+  width: 108px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hub__prow .progress__track {
+  flex: 1;
+  background: #e3e9f2;
+}
+.hub__prow b {
+  width: 46px;
+  text-align: right;
+  color: var(--mint-dark);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 419px) {
+  /* On very small phones the tagline would be clipped — the logo says enough. */
+  .hub__brandtext span {
+    display: none;
+  }
+}
+
+@media (min-width: 620px) {
+  .hub__cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .hub__hero {
+    grid-template-columns: 1.4fr 0.9fr;
+    padding: 22px 26px;
+  }
+  .hub__mascot {
+    width: min(240px, 100%);
+    align-self: center;
+  }
+  .hub__actions .btn {
+    flex: 0 1 auto;
+  }
+}
+@media (min-width: 960px) {
+  .hub__cards {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .hub__inner {
+    padding-top: 22px;
+    gap: 22px;
+  }
+}
+
+
+/* Same latent icon-sizing issue as .btn > svg: give the play glyph a size
+   tied to its label so it can never balloon to its 64-unit viewBox. */
+.gcard__play svg {
+  width: 1.2em;
+  height: 1.2em;
+  flex: 0 0 auto;
+}
