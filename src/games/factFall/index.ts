@@ -560,6 +560,8 @@ export function createFactFallScene(nav: Nav): Scene {
     signNo.classList.toggle('is-show', show);
   }
 
+  let pendingCorrect = false;
+
   function answer(choice: 'YES' | 'NO'): void {
     if (phase !== 'question' || finished) return;
     const q = session.current;
@@ -586,8 +588,6 @@ export function createFactFallScene(nav: Nav): Scene {
     }
     pendingCorrect = correct;
   }
-
-  let pendingCorrect = false;
 
   function crash(): void {
     phase = 'crash';

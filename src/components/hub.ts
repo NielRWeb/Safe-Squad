@@ -79,9 +79,9 @@ const CARDS: CardDef[] = [
     n: 5,
     tag: 'Maze chase',
     title: 'Choose & Escape',
-    desc: 'Answer first — then the question disappears and you must escape through your own gate while three enemies hunt you.',
+    desc: 'Read the statement above the maze, then drive into the YES or NO portal to answer — the maze never hints at the answer and three enemies chase from the start.',
     art: coverMaze(),
-    pills: ['Answer, then run', '3 enemies'],
+    pills: ['Portals = answer', '3 enemies'],
     howTo: 'maze',
   },
   {
@@ -99,9 +99,9 @@ const CARDS: CardDef[] = [
     n: 7,
     tag: 'Board game',
     title: 'Bingo Game',
-    desc: 'Open closed boxes to find stars. A star only counts when you answer its question — complete the highlighted pattern to win.',
+    desc: '25 closed boxes that all look identical. Find 5 hidden stars — each needs a correct YES/NO answer — to complete the secret pattern and get a BINGO.',
     art: coverBingo(),
-    pills: ['5x5 board', 'Random pattern'],
+    pills: ['5x5 board', 'Hidden pattern'],
     howTo: 'bingo',
   },
 ];

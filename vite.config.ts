@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  // Relative base ensures the build works both at domain root and under a sub-path
+  // (e.g. GitHub Pages project site /Safe-Squad/). Hash routing needs no server config.
+  base: './',
   server: {
     host: '0.0.0.0',
     port: 5173,

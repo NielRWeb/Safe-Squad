@@ -544,7 +544,7 @@ export const tipsByGame: Record<string, string[]> = {
     'Need a little help? Tap How to Play for the jump controls.',
   ],
   bingo: [
-    'The highlighted squares are the pattern you must complete.',
+    'The 5 hidden stars form a secret pattern — all boxes look identical while you play.',
     'A star only counts once you answer its question correctly.',
     'Empty boxes are part of the board — they cost you nothing but a tap.',
     'Need a little help? Tap How to Play to review the Bingo rules.',

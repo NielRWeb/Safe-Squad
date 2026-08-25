@@ -39,7 +39,7 @@ const HOWTO: Record<HowToId, HowToDef> = {
   hub: {
     title: 'How SAFE SQUAD works',
     intro:
-      'Three mini-games, five questions each. Every question is about keeping children safe — online, at school and at home.',
+      'Seven mini-games, five questions each. Every question is about keeping children safe — online, at school and at home.',
     steps: [
       {
         icon: icon('play'),
@@ -169,7 +169,7 @@ const HOWTO: Record<HowToId, HowToDef> = {
   hearts: {
     title: 'How to play: Save Your Hearts',
     intro:
-      'A cartoon question battle. You and the doubt demon start with 3 hearts each. Every correct answer lands a hit; every wrong answer costs you a heart. The fight lasts as long as it takes — there is no fixed number of questions.',
+      'A cartoon question battle. You and the doubt demon start with 3 hearts each. Every correct YES/NO answer lands a hit; every wrong answer costs you a heart. The fight lasts until one side loses all hearts.',
     steps: [
       {
         icon: icon('heart'),
@@ -178,8 +178,8 @@ const HOWTO: Record<HowToId, HowToDef> = {
       },
       {
         icon: icon('question'),
-        title: 'Pick the best action',
-        text: 'Each round shows a child-protection situation with three possible responses. Choose the safest one.',
+        title: 'Answer YES or NO',
+        text: 'Each question is a YES/NO child-protection statement. Think about what keeps a child safe, then choose your answer.',
       },
       {
         icon: icon('check'),
@@ -264,12 +264,12 @@ const HOWTO: Record<HowToId, HowToDef> = {
   bingo: {
     title: 'How to play: Bingo Game',
     intro:
-      'Twenty-five closed boxes. Some hide a star, most are empty. Collect stars on the highlighted pattern to win.',
+      'Twenty-five closed boxes that all look identical — nothing highlights the winning squares while you play. Some hide a star, most are empty. Find 5 stars to get a BINGO!',
     steps: [
       {
         icon: icon('flag'),
-        title: 'Watch the pattern',
-        text: 'One Bingo pattern is chosen at random each round and outlined on the board. Only those squares win the game.',
+        title: 'Hidden pattern',
+        text: 'A horizontal, vertical or diagonal 5-star pattern is chosen at random each round and stays hidden until the round ends. All boxes look identical while you play.',
       },
       {
         icon: icon('tap'),
@@ -283,8 +283,8 @@ const HOWTO: Record<HowToId, HowToDef> = {
       },
       {
         icon: icon('check'),
-        title: 'Complete the pattern',
-        text: 'Collect a star on every highlighted square to win. Only the highlighted pattern counts as a Bingo.',
+        title: 'Complete the hidden pattern',
+        text: 'Collect a star on every square of the secret pattern to win. Only the hidden pattern counts as a BINGO — the pattern is revealed once the round ends.',
       },
     ],
     touch: 'Tap a box to open it. The board scales to your screen so every box stays finger-sized.',
