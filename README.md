@@ -202,6 +202,9 @@ version, everything else keeps working.
 
 ## Manual test checklist
 
+These are checks to run **by hand in the browser** — this repository has no
+automated test suite (see [Verification](#5-verification)).
+
 * [x] Hub loads, all seven cards start their game, How to Play + Settings work
 * [x] Sound and music toggles work and persist
 * [x] Official 35-question questionnaire; one random category (5 questions) per round
@@ -223,7 +226,7 @@ version, everything else keeps working.
       never repeats on retry, empty boxes ask nothing, wrong answers never award a star,
       no bypass, only the pattern wins, Retry rebuilds the board
 * [x] 3-mistake coaching popup fires once per round and resets between games
-* [x] Return to Hub asks for confirmation in all three games
+* [x] Return to Hub asks for confirmation in all seven games
 * [x] No horizontal overflow at 320–1920 px, no console errors
 
 ---
@@ -300,7 +303,18 @@ across three full passes through all seven games.
 by real touch taps rather than mouse clicks.
 
 ### 5. Verification
-`spec.mjs`, `bugfix.mjs`, `games47.mjs`, `smoke.mjs`, `portaltest.mjs`,
-`retryalert.mjs`, `changes.mjs`, `pacman.mjs` and `princess-ending.mjs` all pass
-at 390x844 and 1440x900. The new `mobileaudit.mjs` (54), `touchtest.mjs` (17)
-and `perfcheck.mjs` (8) all pass. `tsc --noEmit` is clean.
+The layout and performance fixes above were checked by hand in a real browser at
+390x844 and 1440x900. The one automated gate this repository ships with is the
+TypeScript check, which runs as part of the build:
+
+```bash
+npm run typecheck   # tsc --noEmit                     → clean, no errors
+npm run build       # tsc --noEmit && vite build       → outputs dist/
+```
+
+> **Honest note about tests:** there are **no automated test files committed to
+> this repository**. `playwright` is still listed as a devDependency in
+> `package.json`, but nothing currently uses it — earlier versions of this
+> section named browser scripts (`spec.mjs`, `mobileaudit.mjs`, `perfcheck.mjs`,
+> …) that are not in the repo. Everything is verified manually with the
+> checklist above.
