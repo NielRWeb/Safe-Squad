@@ -115,7 +115,7 @@ export async function query(sql, params = []) {
       return { game_id: id, rounds: String(own.length), players: String(new Set(own.map((r) => r.lrn)).size), average_percent: String(Math.round(avg)), best_correct: String(own.reduce((n, r) => Math.max(n, r.correct), 0)) };
     });
   }
-  if (s.includes('(SELECT COUNT(*) FROM students)')) return [{ students: String(students.length), admins: String(admins.length) }];
+  if (s.includes('(SELECT COUNT(*) FROM students)')) return [{ students: String(students.length), active_students: String(students.filter(x => x.is_active).length), admins: String(admins.length) }];
   if (s.includes('SELECT 1')) return [{ 1: 1 }];
 
   throw new Error(`STUB: unhandled SQL -> ${s.slice(0, 90)}`);

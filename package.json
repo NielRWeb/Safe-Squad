@@ -11,6 +11,7 @@
     "db:setup": "node server/setup-database.js",
     "db:migrate": "node server/migrate-student-status.js",
     "test:management": "node --test tests/student-management.test.js",
+    "test:reports": "node --test tests/reports.test.js",
     "admin:create": "node server/create-admin.js",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",

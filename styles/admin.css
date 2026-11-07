@@ -33,3 +33,6 @@
 .admin__button:disabled { opacity: .6; cursor: wait; }
 .admin__row .admin__active { color: var(--mint-dark); font-weight: 800; }
 .admin__row .admin__inactive { color: var(--bad-deep); font-weight: 800; }
+.admin__report-actions { margin-top: 14px; align-items: center; }
+.admin__export { display: inline-flex; align-items: center; text-decoration: none; }
+.admin__export[hidden] { display: none; }

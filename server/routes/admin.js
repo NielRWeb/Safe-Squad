@@ -211,7 +211,7 @@ router.get('/admin/summary', requireAdmin, async (req, res) => {
         GROUP BY game_id
         ORDER BY game_id`,
     ),
-    query('SELECT (SELECT COUNT(*) FROM students) AS students, (SELECT COUNT(*) FROM admins) AS admins'),
+    query('SELECT (SELECT COUNT(*) FROM students) AS students, (SELECT COUNT(*) FROM students WHERE is_active = 1) AS active_students, (SELECT COUNT(*) FROM admins) AS admins'),
   ]);
 
   const totals = totalsRows[0] ?? {};
@@ -223,6 +223,7 @@ router.get('/admin/summary', requireAdmin, async (req, res) => {
     // numbers so the frontend can chart them without surprises.
     students: Number(counts.students ?? 0),
     admins: Number(counts.admins ?? 0),
+    activeStudents: Number(counts.active_students ?? 0),
     results: {
       rounds: Number(totals.rounds ?? 0),
       studentsWhoPlayed: Number(totals.students_who_played ?? 0),

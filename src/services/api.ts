@@ -150,7 +150,28 @@ export interface StudentFields {
 export interface AdminSummary {
   ok: true;
   students: number;
-  results: { rounds: number; averagePercent: number };
+  activeStudents: number;
+  results: { rounds: number; studentsWhoPlayed: number; averagePercent: number };
+}
+
+export interface ReportFilters { start?: string; end?: string; lrn?: string; page?: number }
+export interface ReportResponse {
+  students: number; activeStudents: number; attempts: number; participants: number;
+  averagePercent: number; correctAnswers: number; questions: number;
+  byGame: { gameId: string; attempts: number; participants: number; averagePercent: number }[];
+  results: GameResult[]; page: number; pageSize: number;
+}
+export function reportQuery(filters: ReportFilters): string {
+  const params = new URLSearchParams();
+  if (filters.start) params.set('start', filters.start);
+  if (filters.end) params.set('end', filters.end);
+  if (filters.lrn) params.set('lrn', filters.lrn);
+  if (filters.page) params.set('page', String(filters.page));
+  const value = params.toString();
+  return value ? `?${value}` : '';
+}
+export function reportCsvUrl(filters: ReportFilters): string {
+  return `${BASE}/admin/reports.csv${reportQuery(filters)}`;
 }
 
 export interface ResultsResponse {
@@ -365,6 +386,10 @@ export const api = {
   adminResults(lrn?: string): Promise<ResultsResponse> {
     const query = lrn ? `?lrn=${encodeURIComponent(lrn)}` : '';
     return request<ResultsResponse>(`/admin/results${query}`);
+  },
+
+  adminReport(filters: ReportFilters): Promise<ReportResponse> {
+    return request<ReportResponse>(`/admin/reports${reportQuery(filters)}`);
   },
 
   adminSummary(): Promise<AdminSummary> {

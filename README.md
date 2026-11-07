@@ -47,6 +47,7 @@ those sample rows before real students use the app.
 | `npm run db:setup`    | creates the database + tables + sample students           |
 | `npm run db:migrate`  | adds student status to an existing database, preserving data |
 | `npm run test:management` | management HTTP tests with an in-memory DB stub |
+| `npm run test:reports` | reports HTTP tests with known in-memory records |
 | `npm run admin:create`| creates an admin account (password is hashed with scrypt) |
 | `npm run build`       | type-checks, then builds to `dist/`                       |
 | `npm run preview`     | serves the production build                               |
@@ -111,6 +112,24 @@ to the newest 50 attempts returned by the API, not the entire history. Each sect
 own loading, empty and retryable error state. Students and practice users are returned to the
 hub; the API independently enforces admin access. Use **Game hub** to return to the games or
 **Log out** to end the session.
+
+### Reports and analytics
+
+In **Reports & analytics**, select a student (including a deactivated student) and/or
+inclusive start and end dates, then choose **Apply filters**. Totals show the current
+roster and active roster; attempt counts, distinct participants, averages, game breakdown
+and history use the applied filters. Averages are the mean of each attempt's
+`correct / total`, not a weighted percentage. History is paginated in groups of 100;
+CSV exports all matching attempts, not just the page. The separate recent-results panel
+still shows only its latest 50 attempts. Date filtering uses the database `played_at`
+calendar date; displayed dates use the browser's local timezone.
+
+`GET /api/admin/reports` and `GET /api/admin/reports.csv` require an admin session and
+accept `start`, `end` (`YYYY-MM-DD`) and `lrn` filters; the JSON endpoint also accepts
+`page`. Exports contain only LRN, name, game, category, score, stars and date. CSV values
+are quoted and formula-like values are prefixed with an apostrophe; LRNs are also prefixed
+to preserve leading zeroes in spreadsheets. Treat downloaded reports as sensitive school
+records. Large exports are assembled in server memory; use narrower filters for large datasets.
 
 ### Managing students
 
@@ -500,8 +519,8 @@ npm run typecheck   # tsc --noEmit                     → clean, no errors
 npm run build       # tsc --noEmit && vite build       → outputs dist/
 ```
 
-The committed `npm run test:management` exercises management HTTP routes using an
-in-memory stub, not MySQL. Earlier Phase 1 login/session/result checks used throwaway
+The committed `npm run test:management` and `npm run test:reports` exercise HTTP routes using
+in-memory stubs, not MySQL. Earlier Phase 1 login/session/result checks used throwaway
 harnesses that are not committed. `playwright` is listed as a devDependency but no
 browser tests are committed. Verify the migration and SQL against a real MySQL instance,
 and use the manual checklist for real-browser behavior.

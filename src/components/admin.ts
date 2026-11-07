@@ -1,6 +1,7 @@
 /** Admin dashboard. The server independently checks the admin session on every request. */
 import { el } from '../utils/dom';
 import { api, ApiError, type AdminStudent, type GameResult } from '../services/api';
+import { createReportsPanel } from './reports';
 import { displayName, logout } from '../core/session';
 import { confirmDialog } from '../core/ui';
 import type { Nav, Scene } from '../core/router';
@@ -71,7 +72,8 @@ export function createAdminScene(nav: Nav): Scene {
       await api.deactivateStudent(student.lrn);
       if (!alive) return;
       managementNotice.textContent = 'Student deactivated. Historical results are preserved.';
-      await loadStudents();
+      reports.refresh();
+      await Promise.all([loadStudents(), loadSummary()]);
     } catch (error) {
       if (!alive) return;
       button.disabled = false;
@@ -113,6 +115,7 @@ export function createAdminScene(nav: Nav): Scene {
         if (!alive) return;
         management.replaceChildren();
         managementNotice.textContent = student ? 'Student updated.' : 'Student added.';
+        reports.refresh();
         await Promise.all([loadStudents(), loadSummary(), loadResults()]);
       } catch (error) {
         if (!alive) return;
@@ -146,7 +149,7 @@ export function createAdminScene(nav: Nav): Scene {
       if (!alive) return;
       const stat = (label: string, value: string) => el('div', { class: 'admin__stat' },
         el('span', { text: label }), el('strong', { text: value }));
-      summary.replaceChildren(stat('Students', String(data.students)), stat('Game attempts', String(data.results.rounds)),
+      summary.replaceChildren(stat('Students', String(data.students)), stat('Active students', String(data.activeStudents)), stat('Game attempts', String(data.results.rounds)), stat('Participating students', String(data.results.studentsWhoPlayed)),
         stat('Average per round', data.results.rounds ? `${data.results.averagePercent}%` : '—'));
     } catch { if (alive) failure(summary, 'summary', () => void loadSummary()); }
   }
@@ -178,12 +181,14 @@ export function createAdminScene(nav: Nav): Scene {
   const signOut = el('button', { class: 'admin__button', type: 'button', text: 'Log out' });
   signOut.addEventListener('click', () => confirmDialog({ title: 'Log out?', text: 'You will return to the login screen.',
     confirmLabel: 'Yes, log out', cancelLabel: 'Cancel', onConfirm: () => { void logout(); } }));
+  const reports = createReportsPanel();
   root.append(
     el('header', { class: 'admin__header' }, el('div', {}, el('span', { class: 'admin__eyebrow', text: 'SAFE SQUAD · TEACHER SPACE' }),
       el('h1', { text: 'Admin dashboard' }), el('p', { text: `Welcome, ${displayName()}.` })),
       el('div', { class: 'admin__actions' }, back, signOut)),
     el('main', { class: 'admin__content' },
       el('section', { class: 'admin__section', 'aria-label': 'Overview' }, el('h2', { text: 'At a glance' }), summary),
+      reports.root,
       el('section', { class: 'admin__section', 'aria-labelledby': 'students-heading' },
         el('h2', { id: 'students-heading', text: 'Students' }), addStudent, management, managementNotice,
         el('label', { for: 'student-search', text: 'Search students' }), studentSearch, studentList),
@@ -194,5 +199,5 @@ export function createAdminScene(nav: Nav): Scene {
           el('div', {}, el('label', { for: 'result-search', text: 'Search results' }), resultSearch),
           el('div', {}, el('label', { for: 'result-game', text: 'Game' }), gameFilter)), resultList)));
   void loadSummary(); void loadStudents(); void loadResults();
-  return { root, destroy: () => { alive = false; } };
+  return { root, destroy: () => { alive = false; reports.destroy(); } };
 }

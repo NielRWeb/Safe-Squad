@@ -28,6 +28,7 @@ import { attachSession, activeSessionCount } from './session.js';
 import authRoutes from './routes/auth.js';
 import resultsRoutes from './routes/results.js';
 import adminRoutes from './routes/admin.js';
+import reportRoutes from './routes/reports.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -102,6 +103,8 @@ app.get('/api/health', async (_req, res) => {
       'POST /api/admin/students/:lrn/deactivate',
       'GET  /api/admin/results',
       'GET  /api/admin/summary',
+      'GET  /api/admin/reports',
+      'GET  /api/admin/reports.csv',
     ],
   });
 });
@@ -111,7 +114,8 @@ app.get('/api/health', async (_req, res) => {
 /* ------------------------------------------------------------------ */
 app.use('/api', authRoutes); //    /api/auth/login, /api/auth/admin-login, /api/auth/logout, /api/me
 app.use('/api', resultsRoutes); // /api/results, /api/me/results
-app.use('/api', adminRoutes); //   /api/admin/students, /api/admin/results, /api/admin/summary
+app.use('/api', adminRoutes);
+app.use('/api', reportRoutes); //   /api/admin/students, /api/admin/results, /api/admin/summary
 
 /* ------------------------------------------------------------------ */
 /* 4. JSON 404 for anything that did not match                         */
