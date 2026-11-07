@@ -12,6 +12,9 @@ seven games still work in *practice mode* — the scores then stay on the device
 
 ---
 
+For hosting preparation, see [Deployment preparation](docs/DEPLOYMENT.md). A passing build
+is not approval for public deployment.
+
 ## Quick start
 
 ```bash
@@ -49,6 +52,7 @@ those sample rows before real students use the app.
 | `npm run test:management` | management HTTP tests with an in-memory DB stub |
 | `npm run test:reports` | reports HTTP tests with known in-memory records |
 | `npm run test:security` | production security and session tests using a file-backed stub |
+| `npm run test:deployment` | deployment configuration and readiness smoke tests using a stub |
 | `npm run admin:create`| creates an admin account (password is hashed with scrypt) |
 | `npm run build`       | type-checks, then builds to `dist/`                       |
 | `npm run preview`     | serves the production build                               |

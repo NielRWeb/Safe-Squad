@@ -13,6 +13,7 @@
     "test:management": "node --test tests/student-management.test.js",
     "test:reports": "node --test tests/reports.test.js",
     "test:security": "node --test tests/security.test.js",
+    "test:deployment": "node --test tests/deployment.test.js",
     "admin:create": "node server/create-admin.js",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",

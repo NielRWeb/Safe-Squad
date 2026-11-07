@@ -64,7 +64,8 @@ export const pool = mysql.createPool({
   ...dbConfig,
   waitForConnections: true,
   connectionLimit: 5,
-  queueLimit: 0,
+  queueLimit: 100, // avoid unbounded memory growth if MySQL cannot keep up
+  connectTimeout: 10000,
   // Return DATETIME columns as plain 'YYYY-MM-DD HH:MM:SS' text. The JSON sent to
   // the browser then looks the same on every computer, with no timezone shifting.
   dateStrings: true,
@@ -137,7 +138,7 @@ const DB_ERROR_CODES = new Set([
 
 /** True when an error came from MySQL or from failing to reach it. */
 export function isDbError(error) {
-  return DB_ERROR_CODES.has(error?.code);
+  return DB_ERROR_CODES.has(error?.code) || error?.message === 'Queue limit reached.';
 }
 
 /**

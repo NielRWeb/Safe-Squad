@@ -45,6 +45,7 @@ function writeSessions(data) {
 
 export async function query(sql, params = []) {
   const s = sql.replace(/\s+/g, ' ');
+  if (s.includes(' LIMIT 0')) { if (process.env.STUB_FAIL_READY === '1') throw new Error('synthetic schema unavailable'); return []; }
   if (s.includes('SELECT COUNT(*) AS total FROM sessions')) return [{ total: Object.values(readSessions()).filter(row => row.expires_ms > params[0] && row.absolute_expires_ms > params[1]).length }];
   if (s.includes('INSERT INTO sessions')) {
     const [token_hash, role, student_lrn, user_data, created_ms, expires_ms, absolute_expires_ms] = params;

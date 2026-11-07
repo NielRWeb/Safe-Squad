@@ -23,6 +23,14 @@ const thisFolder = path.dirname(fileURLToPath(import.meta.url));
 const schemaPath = path.join(thisFolder, 'schema.sql');
 
 async function main() {
+  // This legacy script creates/uses safe_squad and seeds demo rows. Never run it
+  // in production or against a differently named database.
+  if (process.env.NODE_ENV === 'production' || dbConfig.database !== 'safe_squad') {
+    console.error('db:setup is for local safe_squad demo databases only. See docs/DEPLOYMENT.md for a seed-free installation.');
+    process.exitCode = 1;
+    await closePool();
+    return;
+  }
   console.log('');
   console.log('  SAFE SQUAD — database setup');
   console.log(`  MySQL: ${dbConfig.user}@${dbConfig.host}:${dbConfig.port}`);

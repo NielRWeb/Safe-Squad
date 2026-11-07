@@ -23,7 +23,7 @@
  * =============================================================================
  */
 import express from 'express';
-import { dbConfig, missingEnvVars, pingDatabase, isDbError, explainDbError, closePool } from './db.js';
+import { dbConfig, missingEnvVars, pingDatabase, isDbError, explainDbError, closePool, query } from './db.js';
 import { attachSession, activeSessionCount } from './session.js';
 import { production, securityHeaders, csrfGuard, limitAdminLogin } from './security.js';
 import authRoutes from './routes/auth.js';
@@ -32,8 +32,13 @@ import adminRoutes from './routes/admin.js';
 import reportRoutes from './routes/reports.js';
 
 const app = express();
-const PORT = Number(process.env.PORT) || 4000;
-const HOST = '0.0.0.0'; // listen on every network interface, not only localhost
+const portValue = process.env.PORT ?? '4000';
+if (!/^\d+$/.test(portValue) || Number(portValue) < 1 || Number(portValue) > 65535) {
+  throw new Error('PORT must be an integer from 1 to 65535.');
+}
+const PORT = Number(portValue);
+// On a VM the reverse proxy can reach loopback; managed platforms may require 0.0.0.0.
+const HOST = process.env.HOST || (production ? '127.0.0.1' : '0.0.0.0');
 const API_VERSION = '0.1.0';
 const startedAt = Date.now();
 
@@ -84,6 +89,7 @@ app.get('/api/health', async (_req, res) => {
     ...(db.ok || production ? {} : { databaseDetail: db.message }),
     endpoints: [
       'GET  /api/health',
+      'GET  /api/ready',
       'POST /api/auth/login',
       'POST /api/auth/admin-login',
       'POST /api/auth/logout',
@@ -100,6 +106,22 @@ app.get('/api/health', async (_req, res) => {
       'GET  /api/admin/reports.csv',
     ],
   });
+});
+
+/** Readiness is separate from liveness: it verifies DB access and required columns.
+ * These SELECTs read no rows and never expose SQL or connection details to clients. */
+app.get('/api/ready', async (_req, res) => {
+  try {
+    await Promise.all([
+      query('SELECT lrn, first_name, last_name, grade_level, section, is_active FROM students LIMIT 0'),
+      query('SELECT id, username, password_hash, full_name, role FROM admins LIMIT 0'),
+      query('SELECT id, lrn, game_id, category_id, correct, total, stars, played_at FROM game_results LIMIT 0'),
+      query('SELECT token_hash, role, student_lrn, user_data, created_ms, expires_ms, absolute_expires_ms FROM sessions LIMIT 0'),
+    ]);
+    return res.json({ ok: true, service: 'safe-squad-api' });
+  } catch {
+    return res.status(503).json({ ok: false, service: 'safe-squad-api', error: 'Database or required schema unavailable.' });
+  }
 });
 
 /* ------------------------------------------------------------------ */
@@ -145,7 +167,7 @@ app.use((error, _req, res, _next) => {
   }
   // MySQL is down / not set up yet. 503 = "try again later", which is honest.
   if (isDbError(error)) {
-    console.error('[db] ', error.code ?? '', error.message);
+    console.error('[db]', error.code ?? 'database error', production ? '' : error.message);
     return res.status(503).json({
       error: 'The database is not reachable, so this request cannot be answered yet.',
       ...(production ? {} : { detail: explainDbError(error), hint: 'Start MySQL, copy .env.example to .env, then run: npm run db:setup' }),
@@ -162,8 +184,8 @@ app.use((error, _req, res, _next) => {
 const server = app.listen(PORT, HOST, async () => {
   console.log('');
   console.log('  SAFE SQUAD API');
-  console.log(`  → http://localhost:${PORT}/api/health`);
-  console.log(`  MySQL: ${dbConfig.user}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
+  console.log(`  → listening on ${HOST}:${PORT} (health: /api/health, readiness: /api/ready)`);
+  if (!production) console.log(`  MySQL: ${dbConfig.user}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
 
   const missing = missingEnvVars();
   if (missing.length) {
@@ -176,9 +198,9 @@ const server = app.listen(PORT, HOST, async () => {
   if (db.ok) {
     console.log('  MySQL: connected ✔');
   } else {
-    console.log(`  MySQL: NOT reachable ✘  (${db.message})`);
+    console.log(production ? '  MySQL: NOT reachable ✘' : `  MySQL: NOT reachable ✘  (${db.message})`);
     console.log('  The API is still running — endpoints that need data answer 503 with a hint.');
-    console.log('  Once MySQL is up, create the tables with:  npm run db:setup');
+    if (!production) console.log('  Once MySQL is up, create the tables with:  npm run db:setup');
   }
   console.log('');
 });
@@ -186,10 +208,8 @@ const server = app.listen(PORT, HOST, async () => {
 /**
  * Shut down tidily on Ctrl+C:
  *   1. stop accepting new requests,
- *   2. close the sockets browsers are holding open (a keep-alive connection would
- *      otherwise make server.close() wait forever, and Ctrl+C would appear to hang),
- *   3. close the MySQL pool,
- *   4. exit — and if any of that stalls, exit anyway after three seconds.
+ *   2. close idle sockets and allow active requests up to ten seconds,
+ *   3. close the MySQL pool, then exit; force exit on timeout.
  */
 function shutdown(signal) {
   console.log(`\n[api] ${signal} received — shutting down.`);
@@ -203,8 +223,8 @@ function shutdown(signal) {
     process.exit(0);
   });
   server.closeIdleConnections?.();
-  server.closeAllConnections?.();
-  setTimeout(() => process.exit(0), 3000).unref();
+  // Allow active requests to finish, then force close if they are stuck.
+  setTimeout(() => { server.closeAllConnections?.(); process.exit(1); }, 10000).unref();
 }
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

@@ -47,7 +47,8 @@ a secret manager, with separate least-privilege runtime and migration users.
 
 Production environment (injected securely, never committed):
 
-* `NODE_ENV=production` and `PORT` (API listens on all interfaces; firewall it).
+* `NODE_ENV=production`, `PORT`, and optionally `HOST` (defaults to loopback in production;
+  managed services may require `0.0.0.0` with network restrictions).
 * `FRONTEND_ORIGIN=https://school.example` — exact scheme/host/port, no path/trailing slash.
 * `SESSION_COOKIE_SECURE=true`; HTTPS is terminated by the trusted proxy. `SESSION_MINUTES`
   defaults to 120, allowed 1–480; sliding expiry has an 8-hour absolute maximum.
@@ -66,9 +67,8 @@ no-sniff and no-referrer headers; the API supplies its own restrictive headers.
 
 Apply `npm run db:migrate` with the migration account after a backup and before starting this
 version. It retains existing students/results, adds `is_active` if absent, and creates
-`sessions` if absent. Fresh installs get both through `db:setup`; the setup SQL uses the
-`safe_squad` database and includes sample students, so review/remove sample data and do not
-run that seeding script against production. Sessions contain only a token hash and minimal
+`sessions` if absent. For fresh deployments use the seed-free `schema-empty.sql` as described in
+[DEPLOYMENT.md](DEPLOYMENT.md); `db:setup` is local-demo only and refuses production mode. Sessions contain only a token hash and minimal
 identity data, expire after inactivity or 8 hours, and expired rows are cleaned hourly.
 Existing in-memory sessions cannot migrate and users must log in once after this upgrade.
 
