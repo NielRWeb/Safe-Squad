@@ -44,9 +44,18 @@ test('production startup, readiness, graceful stop and invalid port', async () =
       throw Error('API did not start');
     }
     async function stop() {
-      child.kill('SIGTERM'); const code = await new Promise(resolve => child.once('exit', resolve)); child = null;
-      assert.equal(code, 0, 'SIGTERM closes the server cleanly');
-    }
+  if (process.platform === 'win32') {
+    child.kill();
+    await new Promise(resolve => child.once('exit', resolve));
+    child = null;
+    return;
+  }
+
+  child.kill('SIGTERM');
+  const code = await new Promise(resolve => child.once('exit', resolve));
+  child = null;
+  assert.equal(code, 0, 'SIGTERM closes the server cleanly');
+}
     await start();
     let response = await fetch(`http://127.0.0.1:${port}/api/ready`);
     assert.equal(response.status, 200); assert.equal((await response.json()).ok, true);
