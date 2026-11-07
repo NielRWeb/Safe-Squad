@@ -10,6 +10,17 @@ export default defineConfig({
     strictPort: true,
     // Allow the sandboxed / tunnelled preview hosts used during development.
     allowedHosts: true,
+    // Hand every /api/* request to the Express backend (server/index.js, port
+    // 4000) while developing. Browser code therefore always calls a RELATIVE
+    // url like fetch('/api/health'): the page and the API stay on the same
+    // origin, so no CORS configuration is needed and the session cookie works.
+    // Start both with:  npm run dev:server   and   npm run dev
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     host: '0.0.0.0',

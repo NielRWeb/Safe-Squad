@@ -6,6 +6,10 @@
   "description": "SAFE SQUAD - a mobile-first child protection game hub for High School / Senior High School students.",
   "scripts": {
     "dev": "vite",
+    "dev:server": "node --watch server/index.js",
+    "server": "node server/index.js",
+    "db:setup": "node server/setup-database.js",
+    "admin:create": "node server/create-admin.js",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
@@ -14,5 +18,10 @@
     "playwright": "^1.49.1",
     "typescript": "^5.9.3",
     "vite": "^7.1.12"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0",
+    "mysql2": "^3.24.6"
   }
 }
