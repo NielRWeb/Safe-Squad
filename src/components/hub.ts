@@ -17,8 +17,9 @@ import {
 import { mascotKaya } from '../art/characters';
 import { audio } from '../core/audio';
 import { openHowTo, type HowToId } from '../core/howto';
-import { openSettings, soundButtons } from '../core/ui';
+import { confirmDialog, openSettings, soundButtons } from '../core/ui';
 import { progress, type GameId } from '../core/state';
+import { currentUser, displayName, logout } from '../core/session';
 import type { Nav, RouteId, Scene } from '../core/router';
 import { QUESTIONS_PER_ROUND } from '../data/questions';
 
@@ -126,6 +127,57 @@ export function createHubScene(nav: Nav): Scene {
     openSettings();
   });
 
+  /* ---------- who is playing ---------- */
+  const user = currentUser();
+  const userRole =
+    user?.role === 'student'
+      ? [user.gradeLevel, user.section].filter(Boolean).join(' · ') || 'Student'
+      : user?.role === 'admin'
+        ? `Admin · ${user.username}`
+        : 'Practice mode · not saved';
+
+  const userChip = el(
+    'div',
+    { class: 'hub__user', title: userRole },
+    el('span', {
+      class: 'hub__usericon',
+      'aria-hidden': 'true',
+      html: icon(user?.role === 'admin' ? 'gear' : 'people'),
+    }),
+    el(
+      'div',
+      { class: 'hub__usertext' },
+      el('strong', { text: displayName() || 'SAFE SQUAD' }),
+      el('span', { text: userRole }),
+    ),
+  );
+
+  const logoutBtn = el('button', {
+    class: 'icon-btn',
+    type: 'button',
+    'aria-label': user?.role === 'guest' ? 'Exit practice mode' : 'Log out',
+    title: user?.role === 'guest' ? 'Exit practice mode' : 'Log out',
+    html: icon('arrowLeft'),
+  });
+  logoutBtn.addEventListener('click', () => {
+    audio.sfx('click');
+    const practice = user?.role === 'guest';
+    confirmDialog({
+      title: practice ? 'Leave practice mode?' : 'Log out?',
+      text: practice
+        ? 'You will go back to the login screen. Scores kept on this device stay here.'
+        : 'You will go back to the login screen. Rounds already saved to your school record stay saved.',
+      confirmLabel: practice ? 'Yes, leave' : 'Yes, log out',
+      cancelLabel: 'Cancel',
+      onConfirm: () => {
+        // Ends the session on the server and clears our copy of it. main.ts
+        // listens for the session ending and returns everyone to the login
+        // screen, so this handler deliberately does not navigate anywhere.
+        void logout();
+      },
+    });
+  });
+
   const topbar = el(
     'header',
     { class: 'hub__topbar' },
@@ -140,6 +192,8 @@ export function createHubScene(nav: Nav): Scene {
         el('span', { text: 'Child Protection Hub' }),
       ),
     ),
+    userChip,
+    logoutBtn,
     settingsBtn,
     ...soundButtons(),
   );

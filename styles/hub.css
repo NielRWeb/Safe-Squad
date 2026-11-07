@@ -81,6 +81,74 @@
   text-transform: uppercase;
 }
 
+/* ---------- Logged-in user chip ----------
+   Shows who is playing (student name + class, admin username, or "practice
+   mode") and gives the hub a Log out button. On narrow phones the top bar
+   wraps and the chip takes its own row, so the icon buttons are never squashed
+   (that was a real bug fixed earlier in this project). */
+.hub__user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 0 1 auto;
+  padding: 4px 12px 4px 8px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+.hub__usericon {
+  display: flex;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+}
+.hub__usericon svg {
+  width: 100%;
+  height: 100%;
+}
+.hub__usertext {
+  min-width: 0;
+  overflow: hidden;
+}
+.hub__usertext strong {
+  display: block;
+  max-width: 20ch;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hub__usertext span {
+  display: block;
+  max-width: 20ch;
+  color: #bff3ea;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 620px) {
+  .hub__topbar {
+    flex-wrap: wrap;
+  }
+  .hub__user {
+    order: 10;
+    flex: 1 1 100%;
+  }
+  .hub__usertext strong,
+  .hub__usertext span {
+    max-width: 34ch;
+  }
+}
+
 /* ---------- Hero ---------- */
 .hub__hero {
   display: grid;
