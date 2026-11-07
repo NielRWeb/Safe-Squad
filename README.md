@@ -29,7 +29,7 @@ npm run dev      # http://localhost:5173 → the login screen offers "practice m
 ```bash
 cp .env.example .env    # then put your real MySQL password in .env — it is git-ignored
 npm run db:setup        # creates the safe_squad database, tables and 6 sample students
-npm run db:migrate      # required for existing Phase 1/2 databases; safe to repeat
+npm run db:migrate      # required for existing databases; safe to repeat
 npm run admin:create    # creates the first teacher/admin account (prompts for a password)
 
 npm run dev:server      # terminal 1 → API on http://localhost:4000/api/health
@@ -45,9 +45,10 @@ those sample rows before real students use the app.
 | `npm run dev:server`  | the Express API, restarting on file changes               |
 | `npm run server`      | the Express API, no restart                               |
 | `npm run db:setup`    | creates the database + tables + sample students           |
-| `npm run db:migrate`  | adds student status to an existing database, preserving data |
+| `npm run db:migrate`  | adds student status and persistent sessions, preserving data |
 | `npm run test:management` | management HTTP tests with an in-memory DB stub |
 | `npm run test:reports` | reports HTTP tests with known in-memory records |
+| `npm run test:security` | production security and session tests using a file-backed stub |
 | `npm run admin:create`| creates an admin account (password is hashed with scrypt) |
 | `npm run build`       | type-checks, then builds to `dist/`                       |
 | `npm run preview`     | serves the production build                               |
@@ -70,16 +71,13 @@ The seven games play exactly as they always did; what is new is **who is playing
 | **Teacher / Admin** | username + password | play the games (rounds are **not** saved), read every student's rounds and the summary |
 | **Practice mode** | nothing — offered only when the server cannot be reached | play all seven games, scores stay in `localStorage` on that device, nothing is sent anywhere |
 
-> **Say this out loud at the defence: an LRN identifies, it does not authenticate.**
-> An LRN is not a secret, so logging in with one proves nothing — anybody who knows a
-> classmate's number can open that classmate's record. It is built this way because the
-> school asked for passwordless login for young students on shared classroom devices, and
-> that is defensible only while (a) the stored data stays low-risk (name, LRN, game scores),
-> (b) the devices are supervised, and (c) the server stays on the school's own network. If
-> the data ever becomes sensitive, add a second factor (a class PIN, or real passwords for
-> older students). What actually protects the data today is on the **server**: sessions live
-> in server memory, the LRN is never read from a request body, and `/api/admin/*` refuses
-> anybody who is not an admin.
+> **Production launch blocker:** LRN-only login identifies but does not authenticate a
+> student. Anyone who knows an LRN can impersonate that student and view or submit their
+> results. The school has required LRN-only access; this implementation preserves that
+> school-approved risk and does not introduce student passwords, PINs or account lockouts.
+> It is **not sufficient for public deployment**. Propose individually issued student
+> access codes or PINs (never a shared PIN) to the school for explicit approval before
+> changing policy or launching online. See [production security](docs/PRODUCTION.md).
 
 ### API (Express 5 + MySQL, in `server/`)
 
@@ -140,8 +138,8 @@ for confirmation, blocks future logins and revokes existing student sessions. Re
 results remain visible to admins; this release does not provide reactivation or deletion.
 Student status is checked on authenticated student requests, so MySQL must be available.
 
-For an existing Phase 1/2 database, back it up and run `npm run db:migrate` before starting
-this version of the API. It adds `students.is_active` with a default of 1 without dropping
+For an existing Phase 1–4 database, back it up and run `npm run db:migrate` before starting
+this version of the API. It adds `students.is_active` and the persistent `sessions` table without dropping
 rows, and is safe to run again. Fresh `db:setup` already creates the column; rerunning
 `db:setup` alone does not upgrade an existing table. The migration uses the database selected
 by `DB_NAME` in `.env` (the existing setup script creates `safe_squad`).
@@ -175,8 +173,7 @@ games need a logged-in session) and checks it **before** building a screen:
   student lands in Bingo right after logging in;
 * logged in and asking for `#login` → the hub;
 * logged in but without the role a screen needs → a safe screen, not a redirect loop;
-* a session that ends mid-game (sessions live in the server's memory, so restarting the API
-  logs everybody out) → back to the login screen with an explanation.
+* a session that ends mid-game (sessions can expire or be revoked) → back to the login screen with an explanation.
 
 These frontend rules are a convenience, not the security. The real gate is `server/session.js`
 (`requireLogin` / `requireStudent` / `requireAdmin`), which re-checks the cookie on every
@@ -296,7 +293,7 @@ project/
 ├── server/               # Express API — the ONLY code that knows about MySQL
 │   ├── index.js          # app, routes, error handler, graceful shutdown
 │   ├── db.js             # mysql2 pool + friendly error translation
-│   ├── session.js        # in-memory sessions, cookie, requireLogin/Student/Admin
+│   ├── session.js        # persistent sessions, cookie, requireLogin/Student/Admin
 │   ├── passwords.js      # scrypt hashing + timing-safe comparison
 │   ├── format.js         # row → JSON mappers and strict input checks
 │   ├── routes/           # auth.js, results.js, admin.js
@@ -405,7 +402,7 @@ an in-memory stub; earlier login and result checks used throwaway harnesses, not
 * [ ] Student login with a seeded LRN reaches the hub and shows the name in the top bar
 * [ ] Unknown LRN and incomplete LRN show a readable error; incomplete LRNs send no request
 * [ ] Admin login works, saves no rounds, and Log out returns to the login screen
-* [ ] Refreshing the page keeps you logged in (`GET /api/me`); restarting the API does not
+* [ ] Refreshing the page keeps you logged in (`GET /api/me`); restarting the API keeps an unexpired login
 * [ ] `#bingo` while logged out → login screen → back to Bingo after logging in
 * [ ] Finishing any of the seven games shows “Saved to your school record” and the row appears
       in `/api/admin/results`
@@ -519,8 +516,8 @@ npm run typecheck   # tsc --noEmit                     → clean, no errors
 npm run build       # tsc --noEmit && vite build       → outputs dist/
 ```
 
-The committed `npm run test:management` and `npm run test:reports` exercise HTTP routes using
-in-memory stubs, not MySQL. Earlier Phase 1 login/session/result checks used throwaway
+The committed management, reports and security tests exercise HTTP routes using
+test stubs, not MySQL. Earlier Phase 1 login/session/result checks used throwaway
 harnesses that are not committed. `playwright` is listed as a devDependency but no
 browser tests are committed. Verify the migration and SQL against a real MySQL instance,
 and use the manual checklist for real-browser behavior.

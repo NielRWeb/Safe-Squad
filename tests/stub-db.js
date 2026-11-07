@@ -4,6 +4,7 @@
  * Express routes, guards, cookies and JSON shapes can be tested end-to-end.
  */
 import { hashPassword } from './passwords.js';
+import fs from 'node:fs';
 
 const students = [
   { lrn: '136000000001', last_name: 'Dela Cruz', first_name: 'Juan Miguel', grade_level: 'Grade 7', section: 'Sampaguita', created_at: '2026-01-05 08:00:00' },
@@ -31,8 +32,41 @@ export async function closePool() {}
 export const pool = {};
 export async function queryOne(sql, params = []) { const rows = await query(sql, params); return rows[0] ?? null; }
 
+// Fake persistent store for tests only. STUB_SESSION_FILE survives an API restart.
+let memorySessions = {};
+function readSessions() {
+  const file = process.env.STUB_SESSION_FILE;
+  return file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : memorySessions;
+}
+function writeSessions(data) {
+  memorySessions = data;
+  if (process.env.STUB_SESSION_FILE) fs.writeFileSync(process.env.STUB_SESSION_FILE, JSON.stringify(data));
+}
+
 export async function query(sql, params = []) {
   const s = sql.replace(/\s+/g, ' ');
+  if (s.includes('SELECT COUNT(*) AS total FROM sessions')) return [{ total: Object.values(readSessions()).filter(row => row.expires_ms > params[0] && row.absolute_expires_ms > params[1]).length }];
+  if (s.includes('INSERT INTO sessions')) {
+    const [token_hash, role, student_lrn, user_data, created_ms, expires_ms, absolute_expires_ms] = params;
+    const data = readSessions(); data[token_hash] = { token_hash, role, student_lrn, user_data, created_ms, expires_ms, absolute_expires_ms }; writeSessions(data); return { affectedRows: 1 };
+  }
+  if (s.includes('SELECT user_data, created_ms')) {
+    const row = readSessions()[params[0]];
+    return row && row.expires_ms > params[1] && row.absolute_expires_ms > params[2] ? [row] : [];
+  }
+  if (s.includes('UPDATE sessions SET expires_ms')) {
+    const data = readSessions(), row = data[params[1]];
+    if (!row || row.expires_ms <= params[2] || row.absolute_expires_ms <= params[3]) return { affectedRows: 0 };
+    row.expires_ms = params[0]; writeSessions(data); return { affectedRows: 1 };
+  }
+  if (s.includes('DELETE FROM sessions WHERE token_hash')) {
+    const data = readSessions(); const exists = !!data[params[0]]; delete data[params[0]]; writeSessions(data); return { affectedRows: Number(exists) };
+  }
+  if (s.includes("DELETE FROM sessions WHERE role = 'student'")) {
+    const data = readSessions(); for (const [key, row] of Object.entries(data)) if (row.role === 'student' && row.student_lrn === params[0]) delete data[key];
+    writeSessions(data); return { affectedRows: 1 };
+  }
+
 
   if (s.includes('INSERT INTO students')) {
     const [lrn, first_name, last_name, grade_level, section] = params;
@@ -64,6 +98,7 @@ export async function query(sql, params = []) {
     admins.push({ id: nextAdminId++, username, password_hash, full_name, role, created_at: now() });
     return { insertId: admins.length, affectedRows: 1 };
   }
+  if (s.includes('FROM admins WHERE id = ?')) return admins.filter(a => a.id === params[0]);
   if (s.includes('FROM admins WHERE username = ?')) return admins.filter((a) => a.username === params[0]);
   if (s.includes('FROM students WHERE lrn = ?')) return students.filter((x) => x.lrn === params[0] && (!s.includes('AND is_active = 1') || x.is_active === 1));
 

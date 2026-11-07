@@ -77,6 +77,7 @@ export function resultFromRow(row) {
  */
 export function toInteger(value, options = {}) {
   const { fallback = 0, min = Number.MIN_SAFE_INTEGER, max = Number.MAX_SAFE_INTEGER } = options;
+  if ((typeof value !== 'string' && typeof value !== 'number') || (typeof value === 'string' && !value.trim())) return fallback;
   const number = Number(value);
   if (!Number.isFinite(number) || !Number.isInteger(number)) return fallback;
   if (number < min || number > max) return fallback;

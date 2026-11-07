@@ -412,7 +412,7 @@ export function createLoginScene(nav: Nav): Scene {
   root.appendChild(inner);
 
   /* ---------------- first paint ---------------- */
-  // A session that expired (or an API restart, which empties the server's memory)
+  // A session that expired or was revoked
   // is explained once, here, instead of silently dumping the student on a form.
   const ended = takeEndedMessage();
   if (ended) showError(ended);

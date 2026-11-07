@@ -21,3 +21,9 @@ preview_build/
 
 # Vite / editor local overrides, e.g. .env.local, tsconfig.tsbuildinfo.local
 *.local
+
+# Sensitive exports and database backups must not be committed.
+backups/
+*.sql.age
+*.sql.gz
+safe-squad-report*.csv

@@ -25,6 +25,7 @@
 import express from 'express';
 import { dbConfig, missingEnvVars, pingDatabase, isDbError, explainDbError, closePool } from './db.js';
 import { attachSession, activeSessionCount } from './session.js';
+import { production, securityHeaders, csrfGuard, limitAdminLogin } from './security.js';
 import authRoutes from './routes/auth.js';
 import resultsRoutes from './routes/results.js';
 import adminRoutes from './routes/admin.js';
@@ -45,25 +46,16 @@ app.disable('x-powered-by');
 
 // Parse JSON request bodies. The 32 kb ceiling means a huge or malicious body is
 // rejected before it is read into memory.
+
+// API security headers and strict same-origin production policy.
+app.use(securityHeaders);
+app.use(csrfGuard);
+app.post('/api/auth/admin-login', limitAdminLogin);
 app.use(express.json({ limit: '32kb' }));
-
-// A few safety headers. (The `helmet` package does more of these; we keep it to
-// three lines so there is no extra dependency to explain.)
-app.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff'); // never guess a file type
-  res.setHeader('X-Frame-Options', 'DENY'); // cannot be embedded in a hidden frame
-  res.setHeader('Referrer-Policy', 'same-origin');
-  next();
-});
-
-// One log line per request. Invaluable while demonstrating: you can literally
-// watch the API work in the terminal.
 app.use((req, res, next) => {
   const started = Date.now();
-  res.on('finish', () => {
-    const who = req.session ? `${req.session.role}:${req.session.lrn ?? req.session.username ?? ''}` : 'anonymous';
-    console.log(`${req.method} ${req.originalUrl} → ${res.statusCode} in ${Date.now() - started} ms  [${who}]`);
-  });
+  // Never log LRNs, names, query strings, cookie tokens, or request bodies.
+  res.on('finish', () => console.log(`${req.method} API → ${res.statusCode} in ${Date.now() - started} ms`));
   next();
 });
 
@@ -86,9 +78,10 @@ app.get('/api/health', async (_req, res) => {
     version: API_VERSION,
     time: new Date().toISOString(),
     uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
-    activeSessions: activeSessionCount(),
+    // Preserve the health shape without making a database outage crash health.
+    activeSessions: db.ok ? await activeSessionCount().catch(() => 0) : 0,
     database: db.ok ? 'connected' : 'unavailable',
-    ...(db.ok ? {} : { databaseDetail: db.message }),
+    ...(db.ok || production ? {} : { databaseDetail: db.message }),
     endpoints: [
       'GET  /api/health',
       'POST /api/auth/login',
@@ -155,12 +148,11 @@ app.use((error, _req, res, _next) => {
     console.error('[db] ', error.code ?? '', error.message);
     return res.status(503).json({
       error: 'The database is not reachable, so this request cannot be answered yet.',
-      detail: explainDbError(error),
-      hint: 'Start MySQL, copy .env.example to .env, then run: npm run db:setup',
+      ...(production ? {} : { detail: explainDbError(error), hint: 'Start MySQL, copy .env.example to .env, then run: npm run db:setup' }),
     });
   }
 
-  console.error('[api] unexpected error:', error);
+  console.error('[api] unexpected error:', production ? (error?.code || 'internal error') : error);
   return res.status(500).json({ error: 'Something went wrong on the server. The details are in the server terminal.' });
 });
 

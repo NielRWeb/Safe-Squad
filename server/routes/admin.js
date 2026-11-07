@@ -139,7 +139,7 @@ router.post('/admin/students/:lrn/deactivate', requireAdmin, async (req, res) =>
   if (!LRN_PATTERN.test(lrn)) return res.status(400).json({ error: 'An LRN must be exactly 12 digits.' });
   const result = await query('UPDATE students SET is_active = 0 WHERE lrn = ?', [lrn]);
   if (!result.affectedRows) return res.status(404).json({ error: 'Student not found.' });
-  revokeStudentSessions(lrn);
+  await revokeStudentSessions(lrn);
   return res.json({ ok: true, message: 'Student deactivated. Historical results are preserved.' });
 });
 

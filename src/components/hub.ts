@@ -1,3 +1,4 @@
+import { openModal } from '../core/modal';
 /**
  * GAME HUB — the first screen students see.
  * Illustrated background, mascot, three game cards, progress, how-to & settings.
@@ -173,7 +174,7 @@ export function createHubScene(nav: Nav): Scene {
         // Ends the session on the server and clears our copy of it. main.ts
         // listens for the session ending and returns everyone to the login
         // screen, so this handler deliberately does not navigate anywhere.
-        void logout();
+        void logout().catch(() => openModal({ title: 'Could not log out', body: ['The server could not confirm logout. Please reconnect and try again; your session may still be active.'] }));
       },
     });
   });

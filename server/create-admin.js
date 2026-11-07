@@ -22,6 +22,7 @@
  * =============================================================================
  */
 import readline from 'node:readline/promises';
+import { Writable } from 'node:stream';
 import { stdin as input, stdout as output } from 'node:process';
 import { query, queryOne, pingDatabase, explainDbError, closePool } from './db.js';
 import { hashPassword, passwordProblem } from './passwords.js';
@@ -58,15 +59,19 @@ async function main() {
     return;
   }
 
-  const rl = interactive ? readline.createInterface({ input, output }) : null;
+  let muted = false;
+  const promptOutput = new Writable({ write(chunk, _encoding, callback) { if (!muted) output.write(chunk); callback(); } });
+  const rl = interactive ? readline.createInterface({ input, output: promptOutput, terminal: true }) : null;
   try {
     if (rl) {
       console.log('');
       console.log('  SAFE SQUAD — create an admin account');
-      console.log('  (the password you type is visible on your own screen; it is never stored)');
+      console.log('  Password input is hidden; use a private terminal.');
       console.log('');
       username = (await rl.question('  Username        : ')).trim();
-      password = await rl.question('  Password        : ');
+      output.write('  Password        : ');
+      muted = true;
+      try { password = await rl.question(''); } finally { muted = false; output.write('\n'); }
       fullName = (await rl.question('  Full name       : ')).trim();
       role = (await rl.question('  Role [admin]    : ')).trim() || 'admin';
     }

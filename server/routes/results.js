@@ -98,7 +98,7 @@ router.post('/results', requireStudent, async (req, res) => {
     [header.insertId],
   );
 
-  console.log(`[results] saved ${gameId} ${correct}/${total} for ${lrn} (id ${header.insertId})`);
+  console.log('[results] round saved');
   return res.status(201).json({ ok: true, id: Number(header.insertId), result: resultFromRow(saved) });
 });
 

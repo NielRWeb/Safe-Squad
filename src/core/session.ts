@@ -14,7 +14,7 @@
  *      logout()         end the session on the server and here
  *
  * WHERE THE LOGIN REALLY LIVES
- * On the server, in memory (server/session.js), identified by an httpOnly
+ * On the server, in MySQL (server/session.js), identified by an httpOnly
  * cookie. This file only holds a COPY of the display details (name, role, LRN)
  * so screens can render without another request. That copy is not a security
  * measure — the server re-checks the cookie on every single request, so editing
@@ -269,25 +269,15 @@ export function startPractice(): GuestUser {
   return adopt({ role: 'guest', fullName: 'Practice mode' }, null) as GuestUser;
 }
 
-/**
- * Log out. The server call is attempted but never blocks the local logout: if
- * the network is gone we still clear the session here, so the student is never
- * stuck on a screen they cannot leave.
- */
+/** Only report logout as complete once the server has revoked the token. */
 export async function logout(): Promise<void> {
-  if (current && current.role !== 'guest') {
-    try {
-      await api.logout();
-    } catch (err) {
-      console.warn('[session] logout request failed — clearing locally anyway', err);
-    }
-  }
+  if (current && current.role !== 'guest') await api.logout();
   clearLocal();
 }
 
 /**
  * The server told us this login no longer exists (it expired, or the API
- * restarted — sessions live in the server's memory). Clear our copy and let the
+ * revoked). Clear our copy and let the
  * router send the student back to the login screen with an explanation.
  */
 function handleUnauthorized(message: string): void {

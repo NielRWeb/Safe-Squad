@@ -77,7 +77,7 @@ async function boot(): Promise<void> {
   }
 
   /* ---------- a login that ends mid-game ---------- */
-  // Sessions live in the server's memory and expire, so any screen can find
+  // Persistent sessions can expire or be revoked, so any screen can find
   // itself logged out while it is open. When that happens, go to the login
   // screen — never leave a student on a screen that can no longer save anything.
   onSessionChange((session) => {

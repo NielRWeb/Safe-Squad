@@ -11,7 +11,7 @@
  *   GET  /api/me                 returns the logged-in user (or 401)
  *
  * TWO KINDS OF LOGIN, ON PURPOSE
- *   · A STUDENT proves who they are with their LRN alone. There is no password to
+ *   · A STUDENT identifies themselves with their LRN alone (this does not prove identity). There is no password to
  *     forget, which is the point: the app is used by whole classes on shared
  *     devices. The trade-off is that an LRN is not secret, so student data must
  *     stay low-sensitivity (game scores only) and the server must be on a
@@ -74,7 +74,8 @@ router.post('/auth/login', async (req, res) => {
   const student = studentFromRow(row);
 
   // The session keeps only what the dashboards need to display.
-  const token = createSession({
+  await destroySession(req.sessionToken);
+  const token = await createSession({
     role: 'student',
     lrn: student.lrn,
     firstName: student.firstName,
@@ -85,7 +86,7 @@ router.post('/auth/login', async (req, res) => {
   });
   setSessionCookie(res, token);
 
-  console.log(`[auth] student login: ${student.lrn} (${student.fullName})`);
+  console.log('[auth] student login succeeded');
   return res.json({ ok: true, user: { role: 'student', ...student } });
 });
 
@@ -93,8 +94,9 @@ router.post('/auth/login', async (req, res) => {
 /* POST /api/auth/admin-login — username + password                    */
 /* ------------------------------------------------------------------ */
 router.post('/auth/admin-login', async (req, res) => {
-  const username = String(req.body?.username ?? '').trim();
-  const password = String(req.body?.password ?? '');
+  const username = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+  if (username.length > 40 || password.length > 256) return res.status(400).json({ error: 'Invalid login details.' });
 
   if (!username || !password) {
     return res.status(400).json({ error: 'Both a username and a password are required.' });
@@ -109,17 +111,18 @@ router.post('/auth/admin-login', async (req, res) => {
     // Do the work anyway, so "no such user" and "wrong password" take the same
     // amount of time and an attacker cannot discover which usernames exist.
     verifyPassword(password, DUMMY_HASH);
-    console.log(`[auth] admin login failed: unknown username "${username}"`);
+    console.log('[auth] admin login failed');
     // One generic message for both failures — never say which half was wrong.
     return res.status(401).json({ error: 'Wrong username or password.' });
   }
 
   if (!verifyPassword(password, row.password_hash)) {
-    console.log(`[auth] admin login failed: wrong password for "${username}"`);
+    console.log('[auth] admin login failed');
     return res.status(401).json({ error: 'Wrong username or password.' });
   }
 
-  const token = createSession({
+  await destroySession(req.sessionToken);
+  const token = await createSession({
     role: 'admin',
     adminId: Number(row.id),
     username: row.username,
@@ -129,7 +132,7 @@ router.post('/auth/admin-login', async (req, res) => {
   setSessionCookie(res, token);
 
   // Log the success, but NEVER the password and never the hash.
-  console.log(`[auth] admin login: ${row.username}`);
+  console.log('[auth] admin login succeeded');
   return res.json({
     ok: true,
     user: {
@@ -145,10 +148,10 @@ router.post('/auth/admin-login', async (req, res) => {
 /* ------------------------------------------------------------------ */
 /* POST /api/auth/logout                                               */
 /* ------------------------------------------------------------------ */
-router.post('/auth/logout', (req, res) => {
+router.post('/auth/logout', async (req, res) => {
   // Deleting the session on the SERVER is the part that really logs out.
   // Clearing the cookie only removes the token from this browser.
-  destroySession(req.sessionToken);
+  await destroySession(req.sessionToken);
   clearSessionCookie(res);
   return res.json({ ok: true, message: 'Logged out.' });
 });
@@ -178,8 +181,7 @@ router.get('/me', requireLogin, (req, res) => {
           adminRole: session.adminRole ?? 'admin',
         };
 
-  // No database query needed: the session already holds the display details,
-  // which is why a page refresh does not log the student out.
+  // Session middleware loads current display details from the database.
   return res.json({
     ok: true,
     user,

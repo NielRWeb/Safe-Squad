@@ -275,7 +275,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       method,
       // Same origin + this line = the session cookie travels with the request.
       credentials: 'include',
-      headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+      headers: { ...(method === 'GET' ? {} : { 'X-Safe-Squad-Request': '1' }), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {

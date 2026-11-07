@@ -1,3 +1,4 @@
+import { openModal } from '../core/modal';
 /** Admin dashboard. The server independently checks the admin session on every request. */
 import { el } from '../utils/dom';
 import { api, ApiError, type AdminStudent, type GameResult } from '../services/api';
@@ -180,7 +181,7 @@ export function createAdminScene(nav: Nav): Scene {
   back.addEventListener('click', () => nav.toHub());
   const signOut = el('button', { class: 'admin__button', type: 'button', text: 'Log out' });
   signOut.addEventListener('click', () => confirmDialog({ title: 'Log out?', text: 'You will return to the login screen.',
-    confirmLabel: 'Yes, log out', cancelLabel: 'Cancel', onConfirm: () => { void logout(); } }));
+    confirmLabel: 'Yes, log out', cancelLabel: 'Cancel', onConfirm: () => { void logout().catch(() => openModal({ title: 'Could not log out', body: ['The server could not confirm logout. Please reconnect and try again; your session may still be active.'] })); } }));
   const reports = createReportsPanel();
   root.append(
     el('header', { class: 'admin__header' }, el('div', {}, el('span', { class: 'admin__eyebrow', text: 'SAFE SQUAD · TEACHER SPACE' }),
