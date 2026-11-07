@@ -639,6 +639,7 @@ export function createPuzzleScene(nav: Nav): Scene {
           extraLine: 'You completed the picture!',
           message: session.completionMessage,
           categoryName: session.category.name,
+          categoryId: session.category.id,
           onReplay: () => nav.go('puzzle'),
           onHub: nav.toHub,
         }),

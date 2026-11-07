@@ -9,6 +9,8 @@ import { audio } from './audio';
 import { openHowTo, type HowToId } from './howto';
 import { closeAllModals, openModal } from './modal';
 import { settings, saveSettings, resetProgress, recordResult, type GameId } from './state';
+import { canSaveResults, isGuest } from './session';
+import { api, ApiError } from '../services/api';
 import { completionBadge } from '../art/scenes';
 import { mascotKaya } from '../art/characters';
 import { checkChoice, checkYesNo, pickRandom, shuffledAnswers } from './quiz';
@@ -383,13 +385,26 @@ export interface CompletionOptions {
   message?: string;
   /** Category name, shown as a chip above the message. */
   categoryName?: string;
+  /** Category id (c1…c7) — stored with the round so a teacher can see the topic. */
+  categoryId?: string;
+  /**
+   * Stars the player COLLECTED, for the games that have them (Save the Princess,
+   * Bingo). This is not the 0-3 badge rating computed below — that one is only
+   * decoration on this screen. Left out for games without stars (stored as NULL).
+   */
+  starsCollected?: number | null;
   /** Overrides the headline (e.g. "Game over" instead of "Round complete!"). */
   title?: string;
 }
 
 export function buildCompletion(opts: CompletionOptions): HTMLElement {
   const { correct, total } = opts;
+  // Two records of the same round, on purpose:
+  //  · localStorage (as before) — instant, works offline, drives the hub bars;
+  //  · the server — the school's record, so a teacher can see it later.
   recordResult(opts.gameId, correct);
+  const saveLine = el('p', { class: 'complete__save', role: 'status', 'aria-live': 'polite' });
+  submitResult(opts, correct, total, saveLine);
   audio.sfx(correct >= Math.ceil(total * 0.6) ? 'fanfare' : 'sad');
 
   const ratio = total ? correct / total : 0;
@@ -440,6 +455,7 @@ export function buildCompletion(opts: CompletionOptions): HTMLElement {
     opts.categoryName
       ? el('span', { class: 'complete__cat', text: opts.categoryName })
       : el('span', { class: 'sr-only', text: 'Round summary' }),
+    saveLine,
     opts.extraLine ? el('p', { class: 'complete__extra', text: opts.extraLine }) : el('span'),
     el('p', { class: 'complete__msg', text: message }),
     el('div', { class: 'complete__actions' }, replay, hub),
@@ -448,6 +464,77 @@ export function buildCompletion(opts: CompletionOptions): HTMLElement {
   const layer = el('div', { class: 'complete' }, confetti(stars > 0), card);
   window.setTimeout(() => replay.focus(), 300);
   return layer;
+}
+
+/**
+ * Send one finished round to the school's MySQL record (POST /api/results).
+ *
+ * THREE RULES THIS FUNCTION LIVES BY
+ *
+ * 1. IT CAN NEVER BREAK A GAME. The completion screen is already on display; the
+ *    request runs in the background and every failure ends in the small status
+ *    line, never in an exception. A server that is switched off must not stop a
+ *    student from seeing their score or pressing "Play again".
+ *
+ * 2. ONLY A STUDENT LOGIN SAVES. POST /api/results is student-only on the server,
+ *    so an admin (who is allowed to try the games) and practice mode (no server
+ *    at all) are told plainly that nothing was sent — we do not fire a request we
+ *    already know will be refused with 403.
+ *
+ * 3. NO LRN IS SENT. The server takes the student from the session cookie, so a
+ *    round can only ever be saved to the record of the person who played it.
+ *
+ * The line under the score tells the truth either way, which matters: a teacher
+ * must be able to see at a glance that results are not reaching the database.
+ */
+function submitResult(
+  opts: CompletionOptions,
+  correct: number,
+  total: number,
+  line: HTMLElement,
+): void {
+  if (isGuest()) {
+    line.textContent = 'Practice mode — this round stayed on this device.';
+    line.classList.add('is-local');
+    return;
+  }
+  if (!canSaveResults()) {
+    line.textContent = 'Admin session — rounds are not saved to a student record.';
+    line.classList.add('is-local');
+    return;
+  }
+
+  line.textContent = 'Saving your result…';
+
+  api
+    .saveResult({
+      gameId: opts.gameId,
+      categoryId: opts.categoryId ?? '',
+      correct,
+      total,
+      stars: opts.starsCollected ?? null,
+    })
+    .then(() => {
+      line.textContent = 'Saved to your school record';
+      line.classList.add('is-saved');
+    })
+    .catch((err: unknown) => {
+      // The local best score in localStorage is already written, so the student
+      // loses nothing on this device — say exactly that.
+      const reason =
+        err instanceof ApiError
+          ? err.isOffline
+            ? 'the server cannot be reached'
+            : err.isDatabaseDown
+              ? 'the database is not connected'
+              : err.isNotLoggedIn
+                ? 'your login ended'
+                : err.message
+          : 'an unexpected error';
+      console.warn('[ui] result not saved:', err);
+      line.textContent = `Not saved (${reason}) — your score is still on this device.`;
+      line.classList.add('is-failed');
+    });
 }
 
 function confetti(active: boolean): HTMLElement {

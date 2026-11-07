@@ -285,6 +285,7 @@ export function createBabyCryScene(nav: Nav): Scene {
         extraLine: extra,
         message: session.completionMessage,
         categoryName: session.category.name,
+        categoryId: session.category.id,
         onReplay: () => nav.go('babyCry'),
         onHub: nav.toHub,
       }),

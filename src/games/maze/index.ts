@@ -446,6 +446,7 @@ export function createMazeScene(nav: Nav): Scene {
         extraLine: 'You escaped every maze!',
         message: session.completionMessage,
         categoryName: session.category.name,
+        categoryId: session.category.id,
         onReplay: () => nav.go('maze'),
         onHub: nav.toHub,
       }),

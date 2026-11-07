@@ -258,6 +258,7 @@ export function createHeartsScene(nav: Nav): Scene {
             : `The demon won this one. You landed ${MAX_HEARTS - rivalHearts} of ${MAX_HEARTS} hits.`,
           message: session.completionMessage,
           categoryName: session.category.name,
+          categoryId: session.category.id,
           onReplay: () => nav.go('hearts'),
           onHub: nav.toHub,
         }),

@@ -697,6 +697,7 @@ export function createFactFallScene(nav: Nav): Scene {
           : `You reached the destination with ${chances}/${MAX_CHANCES} chances left!`,
         message: session.completionMessage,
         categoryName: session.category.name,
+        categoryId: session.category.id,
         onReplay: () => nav.go('factFall'),
         onHub: nav.toHub,
       }),
