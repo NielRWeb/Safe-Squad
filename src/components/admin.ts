@@ -1,6 +1,6 @@
 /** Admin dashboard. The server independently checks the admin session on every request. */
 import { el } from '../utils/dom';
-import { api, type AdminStudent, type GameResult } from '../services/api';
+import { api, ApiError, type AdminStudent, type GameResult } from '../services/api';
 import { displayName, logout } from '../core/session';
 import { confirmDialog } from '../core/ui';
 import type { Nav, Scene } from '../core/router';
@@ -23,6 +23,8 @@ export function createAdminScene(nav: Nav): Scene {
   let results: GameResult[] = [];
   const root = el('section', { class: 'admin', 'aria-label': 'Admin dashboard' });
   const summary = el('div', { class: 'admin__stats', 'aria-live': 'polite' });
+  const management = el('div', { class: 'admin__management' });
+  const managementNotice = el('p', { class: 'admin__message', role: 'status', 'aria-live': 'polite' });
   const studentList = el('div', { class: 'admin__list', 'aria-live': 'polite' });
   const resultList = el('div', { class: 'admin__list', 'aria-live': 'polite' });
   const studentSearch = el('input', { id: 'student-search', type: 'search', placeholder: 'Name, LRN, grade or section' });
@@ -43,11 +45,84 @@ export function createAdminScene(nav: Nav): Scene {
     const search = studentSearch.value.trim().toLowerCase();
     const matching = students.filter(s => [s.lrn, s.fullName, s.gradeLevel, s.section].join(' ').toLowerCase().includes(search));
     if (!matching.length) return message(studentList, search ? 'No students match your search.' : 'No students found.');
-    studentList.replaceChildren(...matching.map(s => el('article', { class: 'admin__row' },
-      el('strong', { text: s.fullName || 'Unnamed student' }),
-      el('span', { text: `LRN: ${s.lrn}` }),
-      el('span', { text: [s.gradeLevel, s.section].filter(Boolean).join(' · ') || 'Grade and section unavailable' }),
-    )));
+    studentList.replaceChildren(...matching.map(s => {
+      const edit = el('button', { class: 'admin__button admin__button--outline', type: 'button', text: 'Edit', 'aria-label': `Edit ${s.fullName}` });
+      edit.addEventListener('click', () => showForm(s));
+      const deactivate = el('button', { class: 'admin__button admin__button--outline', type: 'button', text: 'Deactivate', 'aria-label': `Deactivate ${s.fullName}` });
+      deactivate.addEventListener('click', () => confirmDialog({
+        title: 'Deactivate student?',
+        text: `${s.fullName} will no longer be able to log in. Their past results will be kept.`,
+        confirmLabel: 'Yes, deactivate', cancelLabel: 'Cancel',
+        onConfirm: () => { void deactivateStudent(s, deactivate); },
+      }));
+      return el('article', { class: 'admin__row' },
+        el('strong', { text: s.fullName || 'Unnamed student' }),
+        el('span', { text: `LRN: ${s.lrn}` }),
+        el('span', { text: [s.gradeLevel, s.section].filter(Boolean).join(' · ') || 'Grade and section unavailable' }),
+        el('span', { class: s.isActive ? 'admin__active' : 'admin__inactive', text: s.isActive ? 'Active' : 'Deactivated' }),
+        el('div', { class: 'admin__actions' }, edit, s.isActive ? deactivate : null));
+    }));
+  }
+
+  async function deactivateStudent(student: AdminStudent, button: HTMLButtonElement): Promise<void> {
+    button.disabled = true;
+    managementNotice.textContent = 'Deactivating student…';
+    try {
+      await api.deactivateStudent(student.lrn);
+      if (!alive) return;
+      managementNotice.textContent = 'Student deactivated. Historical results are preserved.';
+      await loadStudents();
+    } catch (error) {
+      if (!alive) return;
+      button.disabled = false;
+      managementNotice.textContent = error instanceof ApiError ? error.message : 'Could not deactivate student. Please try again.';
+    }
+  }
+
+  function showForm(student?: AdminStudent): void {
+    managementNotice.textContent = '';
+    const title = el('h3', { text: student ? 'Edit student' : 'Add student' });
+    const form = el('form', { class: 'admin__form' });
+    function field(id: string, label: string, value: string, max: number): HTMLInputElement {
+      const input = el('input', { id, value, maxlength: max, required: true, type: 'text' });
+      form.append(el('div', {}, el('label', { for: id, text: label }), input));
+      return input;
+    }
+    const lrn = field('manage-lrn', 'LRN (12 digits)', student?.lrn || '', 12);
+    lrn.setAttribute('inputmode', 'numeric'); lrn.setAttribute('pattern', '[0-9]{12}');
+    if (student) { lrn.readOnly = true; lrn.setAttribute('aria-describedby', 'lrn-note'); form.append(el('p', { id: 'lrn-note', class: 'admin__note', text: 'LRN cannot be changed because it links to past results.' })); }
+    const firstName = field('manage-first', 'First name', student?.firstName || '', 60);
+    const lastName = field('manage-last', 'Last name', student?.lastName || '', 60);
+    const gradeLevel = field('manage-grade', 'Grade', student?.gradeLevel || '', 20);
+    const section = field('manage-section', 'Section', student?.section || '', 30);
+    const errorLine = el('p', { class: 'admin__error', role: 'alert' });
+    const save = el('button', { class: 'admin__button', type: 'submit', text: student ? 'Save changes' : 'Add student' });
+    const cancel = el('button', { class: 'admin__button admin__button--outline', type: 'button', text: 'Cancel' });
+    cancel.addEventListener('click', () => management.replaceChildren());
+    form.append(errorLine, el('div', { class: 'admin__actions' }, save, cancel));
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const fields = { firstName: firstName.value.trim(), lastName: lastName.value.trim(), gradeLevel: gradeLevel.value.trim(), section: section.value.trim() };
+      if (!/^\d{12}$/.test(lrn.value.trim()) || Object.values(fields).some(value => !value)) {
+        errorLine.textContent = 'Enter a 12-digit LRN and fill in every field.'; return;
+      }
+      save.disabled = true; cancel.disabled = true; errorLine.textContent = '';
+      try {
+        if (student) await api.updateStudent(student.lrn, fields);
+        else await api.createStudent({ lrn: lrn.value.trim(), ...fields });
+        if (!alive) return;
+        management.replaceChildren();
+        managementNotice.textContent = student ? 'Student updated.' : 'Student added.';
+        await Promise.all([loadStudents(), loadSummary(), loadResults()]);
+      } catch (error) {
+        if (!alive) return;
+        errorLine.textContent = error instanceof ApiError ? error.message : 'Could not save student. Please try again.';
+        save.disabled = false; cancel.disabled = false;
+      }
+    });
+    management.replaceChildren(title, form);
+    lrn.focus();
+
   }
   function renderResults(): void {
     const search = resultSearch.value.trim().toLowerCase();
@@ -96,6 +171,8 @@ export function createAdminScene(nav: Nav): Scene {
   studentSearch.addEventListener('input', renderStudents);
   resultSearch.addEventListener('input', renderResults);
   gameFilter.addEventListener('change', renderResults);
+  const addStudent = el('button', { class: 'admin__button', type: 'button', text: 'Add student' });
+  addStudent.addEventListener('click', () => showForm());
   const back = el('button', { class: 'admin__button admin__button--outline', type: 'button', text: '← Game hub' });
   back.addEventListener('click', () => nav.toHub());
   const signOut = el('button', { class: 'admin__button', type: 'button', text: 'Log out' });
@@ -108,7 +185,7 @@ export function createAdminScene(nav: Nav): Scene {
     el('main', { class: 'admin__content' },
       el('section', { class: 'admin__section', 'aria-label': 'Overview' }, el('h2', { text: 'At a glance' }), summary),
       el('section', { class: 'admin__section', 'aria-labelledby': 'students-heading' },
-        el('h2', { id: 'students-heading', text: 'Students' }),
+        el('h2', { id: 'students-heading', text: 'Students' }), addStudent, management, managementNotice,
         el('label', { for: 'student-search', text: 'Search students' }), studentSearch, studentList),
       el('section', { class: 'admin__section', 'aria-labelledby': 'results-heading' },
         el('h2', { id: 'results-heading', text: 'Recent game results' }),

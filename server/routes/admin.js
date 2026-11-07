@@ -22,7 +22,7 @@
  */
 import { Router } from 'express';
 import { query } from '../db.js';
-import { requireAdmin } from '../session.js';
+import { requireAdmin, revokeStudentSessions } from '../session.js';
 import { studentFromRow, resultFromRow, toInteger } from '../format.js';
 
 const router = Router();
@@ -67,6 +67,7 @@ router.get('/admin/students', requireAdmin, async (req, res) => {
             s.first_name,
             s.grade_level,
             s.section,
+            s.is_active,
             s.created_at,
             COUNT(g.id)                                              AS rounds_played,
             COALESCE(MAX(g.correct), 0)                              AS best_correct,
@@ -75,13 +76,14 @@ router.get('/admin/students', requireAdmin, async (req, res) => {
        FROM students s
        LEFT JOIN game_results g ON g.lrn = s.lrn
        ${where}
-      GROUP BY s.lrn, s.last_name, s.first_name, s.grade_level, s.section, s.created_at
+      GROUP BY s.lrn, s.last_name, s.first_name, s.grade_level, s.section, s.is_active, s.created_at
       ORDER BY s.last_name, s.first_name`,
     params,
   );
 
   const students = rows.map((row) => ({
     ...studentFromRow(row),
+    isActive: Boolean(Number(row.is_active)),
     createdAt: row.created_at ?? null,
     roundsPlayed: Number(row.rounds_played),
     bestCorrect: Number(row.best_correct),
@@ -90,6 +92,55 @@ router.get('/admin/students', requireAdmin, async (req, res) => {
   }));
 
   return res.json({ ok: true, count: students.length, students });
+});
+
+/* Student management never changes the LRN or touches game_results. */
+function studentFields(body) {
+  const specs = [['firstName', 60], ['lastName', 60], ['gradeLevel', 20], ['section', 30]];
+  const values = [];
+  for (const [key, max] of specs) {
+    if (typeof body?.[key] !== 'string') return null;
+    const value = body[key].trim().replace(/\s+/g, ' ');
+    // Reject control characters; text is rendered with textContent on the client.
+    if (!value || value.length > max || /[\x00-\x1f\x7f]/.test(value)) return null;
+    values.push(value);
+  }
+  return values;
+}
+
+router.post('/admin/students', requireAdmin, async (req, res) => {
+  const lrn = typeof req.body?.lrn === 'string' ? req.body.lrn.trim() : '';
+  const fields = studentFields(req.body);
+  if (!LRN_PATTERN.test(lrn) || !fields) {
+    return res.status(400).json({ error: 'Enter a 12-digit LRN, first and last name, grade and section within their length limits.' });
+  }
+  try {
+    await query('INSERT INTO students (lrn, first_name, last_name, grade_level, section) VALUES (?, ?, ?, ?, ?)', [lrn, ...fields]);
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'A student with this LRN already exists.' });
+    throw error;
+  }
+  return res.status(201).json({ ok: true, message: 'Student added.' });
+});
+
+router.put('/admin/students/:lrn', requireAdmin, async (req, res) => {
+  const { lrn } = req.params;
+  const fields = studentFields(req.body);
+  if (!LRN_PATTERN.test(lrn) || !fields || (req.body?.lrn !== undefined && req.body.lrn !== lrn)) {
+    return res.status(400).json({ error: 'Enter valid student details. An LRN cannot be changed.' });
+  }
+  const result = await query('UPDATE students SET first_name = ?, last_name = ?, grade_level = ?, section = ? WHERE lrn = ?', [...fields, lrn]);
+  if (!result.affectedRows) return res.status(404).json({ error: 'Student not found.' });
+  return res.json({ ok: true, message: 'Student updated.' });
+});
+
+router.post('/admin/students/:lrn/deactivate', requireAdmin, async (req, res) => {
+  const { lrn } = req.params;
+  if (!LRN_PATTERN.test(lrn)) return res.status(400).json({ error: 'An LRN must be exactly 12 digits.' });
+  const result = await query('UPDATE students SET is_active = 0 WHERE lrn = ?', [lrn]);
+  if (!result.affectedRows) return res.status(404).json({ error: 'Student not found.' });
+  revokeStudentSessions(lrn);
+  return res.json({ ok: true, message: 'Student deactivated. Historical results are preserved.' });
 });
 
 /* ------------------------------------------------------------------ */

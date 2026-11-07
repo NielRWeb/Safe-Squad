@@ -27,3 +27,9 @@
 .admin__message { color: var(--ink-soft); margin: 8px 0; }
 .admin__error { color: var(--bad-deep); }
 @media (min-width: 600px) { .admin__filters { grid-template-columns: 2fr 1fr; } .admin__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.admin__management:not(:empty) { margin-top: 16px; padding: 16px; background: #e9faf6; border-radius: var(--r-md); }
+.admin__management h3 { margin: 0 0 4px; }
+.admin__form .admin__actions { margin-top: 14px; }
+.admin__button:disabled { opacity: .6; cursor: wait; }
+.admin__row .admin__active { color: var(--mint-dark); font-weight: 800; }
+.admin__row .admin__inactive { color: var(--bad-deep); font-weight: 800; }

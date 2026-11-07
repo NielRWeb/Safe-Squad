@@ -9,6 +9,8 @@
     "dev:server": "node --watch server/index.js",
     "server": "node server/index.js",
     "db:setup": "node server/setup-database.js",
+    "db:migrate": "node server/migrate-student-status.js",
+    "test:management": "node --test tests/student-management.test.js",
     "admin:create": "node server/create-admin.js",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",

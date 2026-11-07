@@ -29,6 +29,7 @@ npm run dev      # http://localhost:5173 → the login screen offers "practice m
 ```bash
 cp .env.example .env    # then put your real MySQL password in .env — it is git-ignored
 npm run db:setup        # creates the safe_squad database, tables and 6 sample students
+npm run db:migrate      # required for existing Phase 1/2 databases; safe to repeat
 npm run admin:create    # creates the first teacher/admin account (prompts for a password)
 
 npm run dev:server      # terminal 1 → API on http://localhost:4000/api/health
@@ -44,6 +45,8 @@ those sample rows before real students use the app.
 | `npm run dev:server`  | the Express API, restarting on file changes               |
 | `npm run server`      | the Express API, no restart                               |
 | `npm run db:setup`    | creates the database + tables + sample students           |
+| `npm run db:migrate`  | adds student status to an existing database, preserving data |
+| `npm run test:management` | management HTTP tests with an in-memory DB stub |
 | `npm run admin:create`| creates an admin account (password is hashed with scrypt) |
 | `npm run build`       | type-checks, then builds to `dist/`                       |
 | `npm run preview`     | serves the production build                               |
@@ -108,6 +111,26 @@ to the newest 50 attempts returned by the API, not the entire history. Each sect
 own loading, empty and retryable error state. Students and practice users are returned to the
 hub; the API independently enforces admin access. Use **Game hub** to return to the games or
 **Log out** to end the session.
+
+### Managing students
+
+Use **Add student** or **Edit** on a roster card. First name, last name, grade, section,
+and a 12-digit LRN are required; an LRN cannot be edited because it identifies historical
+results. Duplicate LRNs (including deactivated records) are rejected. **Deactivate** asks
+for confirmation, blocks future logins and revokes existing student sessions. Records and
+results remain visible to admins; this release does not provide reactivation or deletion.
+Student status is checked on authenticated student requests, so MySQL must be available.
+
+For an existing Phase 1/2 database, back it up and run `npm run db:migrate` before starting
+this version of the API. It adds `students.is_active` with a default of 1 without dropping
+rows, and is safe to run again. Fresh `db:setup` already creates the column; rerunning
+`db:setup` alone does not upgrade an existing table. The migration uses the database selected
+by `DB_NAME` in `.env` (the existing setup script creates `safe_squad`).
+
+Management endpoints: `POST /api/admin/students`, `PUT /api/admin/students/:lrn`, and
+`POST /api/admin/students/:lrn/deactivate`. Each is protected by the server's admin guard.
+Run `npm run test:management` for HTTP integration tests with a temporary in-memory database
+stub. Those tests do not validate MySQL SQL or migration behavior.
 
 ### How a finished round is saved
 
@@ -357,9 +380,8 @@ version, everything else keeps working.
 
 ## Manual test checklist
 
-These are checks to run **by hand in the browser** — this repository has no committed
-automated test suite (see [How this was tested](#how-this-was-tested)). The login, session and
-result-saving behaviour below the line was checked with throwaway harnesses, not in a browser.
+These are checks to run **by hand in the browser**. The committed management HTTP test uses
+an in-memory stub; earlier login and result checks used throwaway harnesses, not a browser.
 
 * [ ] Student login with a seeded LRN reaches the hub and shows the name in the top bar
 * [ ] Unknown LRN and incomplete LRN show a readable error; incomplete LRNs send no request
@@ -478,12 +500,8 @@ npm run typecheck   # tsc --noEmit                     → clean, no errors
 npm run build       # tsc --noEmit && vite build       → outputs dist/
 ```
 
-> **Honest note about tests:** there are **no automated test files committed to
-> this repository**. `playwright` is still listed as a devDependency in
-> `package.json`, but nothing currently uses it — earlier versions of this
-> section named browser scripts (`spec.mjs`, `mobileaudit.mjs`, `perfcheck.mjs`,
-> …) that are not in the repo. The game screens are verified manually with the
-> checklist above; the login/session/result code was verified with the
-> throwaway harnesses described in
-> [How this was tested](#how-this-was-tested) (196 checks, none of them
-> committed, none of them needing MySQL or a browser).
+The committed `npm run test:management` exercises management HTTP routes using an
+in-memory stub, not MySQL. Earlier Phase 1 login/session/result checks used throwaway
+harnesses that are not committed. `playwright` is listed as a devDependency but no
+browser tests are committed. Verify the migration and SQL against a real MySQL instance,
+and use the manual checklist for real-browser behavior.

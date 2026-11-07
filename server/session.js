@@ -30,6 +30,7 @@
  * =============================================================================
  */
 import crypto from 'node:crypto';
+import { queryOne } from './db.js';
 
 /* ------------------------------------------------------------------ */
 /* Settings (all from .env, all with safe defaults)                    */
@@ -93,6 +94,13 @@ export function getSession(token) {
 /** End one session (logout). */
 export function destroySession(token) {
   if (token) sessions.delete(token);
+}
+
+/** Revoke every session belonging to a deactivated student. */
+export function revokeStudentSessions(lrn) {
+  for (const [token, session] of sessions) {
+    if (session.role === 'student' && session.lrn === lrn) sessions.delete(token);
+  }
 }
 
 /** End every session (useful when you restart a lesson or change the roster). */
@@ -164,10 +172,19 @@ export function clearSessionCookie(res) {
  * Runs on EVERY request: puts the session (or null) on `req.session`, so route
  * handlers can simply ask "who is this?".
  */
-export function attachSession(req, _res, next) {
+export async function attachSession(req, _res, next) {
   const token = parseCookies(req)[COOKIE_NAME];
   req.sessionToken = token ?? null;
   req.session = getSession(token);
+  // Re-check persisted status for every student request. This also closes the
+  // race between a login already in flight and an admin deactivating that LRN.
+  if (req.session?.role === 'student') {
+    const row = await queryOne('SELECT is_active FROM students WHERE lrn = ?', [req.session.lrn]);
+    if (!row || !Number(row.is_active)) {
+      destroySession(token);
+      req.session = null;
+    }
+  }
   next();
 }
 

@@ -137,6 +137,14 @@ export interface AdminStudent {
   fullName: string;
   gradeLevel: string;
   section: string;
+  isActive: boolean;
+}
+
+export interface StudentFields {
+  firstName: string;
+  lastName: string;
+  gradeLevel: string;
+  section: string;
 }
 
 export interface AdminSummary {
@@ -213,7 +221,7 @@ export class ApiError extends Error {
  * ==========================================================================*/
 
 interface RequestOptions {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT';
   body?: unknown;
   /**
    * A 401 normally means "your login ended", which tells the whole app to return
@@ -340,6 +348,18 @@ export const api = {
   adminStudents(search?: string): Promise<{ ok: true; count: number; students: AdminStudent[] }> {
     const query = search ? `?search=${encodeURIComponent(search)}` : '';
     return request(`/admin/students${query}`);
+  },
+
+  createStudent(student: StudentFields & { lrn: string }): Promise<{ ok: true; message: string }> {
+    return request('/admin/students', { method: 'POST', body: student });
+  },
+
+  updateStudent(lrn: string, student: StudentFields): Promise<{ ok: true; message: string }> {
+    return request(`/admin/students/${encodeURIComponent(lrn)}`, { method: 'PUT', body: student });
+  },
+
+  deactivateStudent(lrn: string): Promise<{ ok: true; message: string }> {
+    return request(`/admin/students/${encodeURIComponent(lrn)}/deactivate`, { method: 'POST' });
   },
 
   adminResults(lrn?: string): Promise<ResultsResponse> {

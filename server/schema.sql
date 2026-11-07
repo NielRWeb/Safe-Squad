@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS students (
   first_name   VARCHAR(60)  NOT NULL,
   grade_level  VARCHAR(20)  NOT NULL DEFAULT '',
   section      VARCHAR(30)  NOT NULL DEFAULT '',
+  is_active    TINYINT(1)   NOT NULL DEFAULT 1,
   created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (lrn),
   INDEX idx_students_name (last_name, first_name),

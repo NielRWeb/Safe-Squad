@@ -61,7 +61,7 @@ router.post('/auth/login', async (req, res) => {
   // accounts on the fly: the class list is the school's, and letting anyone make
   // an account would fill the database with junk.
   const row = await queryOne(
-    'SELECT lrn, first_name, last_name, grade_level, section FROM students WHERE lrn = ?',
+    'SELECT lrn, first_name, last_name, grade_level, section FROM students WHERE lrn = ? AND is_active = 1',
     [lrn],
   );
 
