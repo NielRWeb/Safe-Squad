@@ -63,7 +63,7 @@ export type CurrentUser = ServerUser | GuestUser;
  *   public    – no login needed (the login screen itself)
  *   loggedIn  – any session: student, admin or practice mode
  *   student   – student sessions only
- *   admin     – admin sessions only (the admin dashboard, next phase)
+ *   admin     – admin sessions only (the admin dashboard)
  */
 export type AccessLevel = 'public' | 'loggedIn' | 'student' | 'admin';
 

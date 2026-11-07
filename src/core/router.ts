@@ -29,6 +29,7 @@ export interface Scene {
 export type RouteId =
   | 'login'
   | 'hub'
+  | 'admin'
   | 'babyCry'
   | 'puzzle'
   | 'factFall'
@@ -46,12 +47,12 @@ export type RouteId =
  *                                  game; their rounds are simply not saved
  *                                  (POST /api/results is student-only).
  *
- * A future 'admin' dashboard route goes in this table with the 'admin' level and
- * nothing else has to change.
+ *   admin              admin     – admin sessions only.
  */
 export const ROUTE_ACCESS: Record<RouteId, AccessLevel> = {
   login: 'public',
   hub: 'loggedIn',
+  admin: 'admin',
   babyCry: 'loggedIn',
   puzzle: 'loggedIn',
   factFall: 'loggedIn',

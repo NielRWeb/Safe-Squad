@@ -193,6 +193,7 @@ export function createHubScene(nav: Nav): Scene {
       ),
     ),
     userChip,
+    user?.role === 'admin' ? el('button', { class: 'admin-link', type: 'button', text: 'Dashboard', onClick: () => nav.go('admin') }) : null,
     logoutBtn,
     settingsBtn,
     ...soundButtons(),

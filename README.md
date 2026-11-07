@@ -99,6 +99,16 @@ MySQL is not connected). The session cookie (`safesquad_session`) is `httpOnly` 
 hashed with `node:crypto` scrypt (per-user salt, timing-safe comparison); nothing is ever
 logged or sent back to the browser.
 
+### Admin dashboard
+
+Admins can open **Dashboard** from the game hub, or visit `#admin`. The dashboard shows
+student and attempt totals, the average percentage per round, a searchable student roster,
+and recent results with student, game, category, score, stars and date. Result filters apply
+to the newest 50 attempts returned by the API, not the entire history. Each section has its
+own loading, empty and retryable error state. Students and practice users are returned to the
+hub; the API independently enforces admin access. Use **Game hub** to return to the games or
+**Log out** to end the session.
+
 ### How a finished round is saved
 
 `src/core/ui.ts → buildCompletion()` is the one completion screen all seven games already
@@ -260,7 +270,7 @@ project/
 │   ├── games.css         # game screens 1-3 + character animations
 │   └── games2.css        # game screens 4-7 + shared question overlay
 ├── src/
-│   ├── main.ts           # restores the session, then boots the router (8 routes)
+│   ├── main.ts           # restores the session, then boots the router (9 routes)
 │   ├── services/
 │   │   └── api.ts        # every HTTP call, one ApiError type
 │   ├── data/
@@ -284,6 +294,7 @@ project/
 │   │   ├── scenes2.ts     # arena, maze, bingo stage + card art (games 4-7)
 │   │   └── canvasArt.ts   # canvas drawing for the maze + platform games
 │   ├── components/
+│   │   ├── admin.ts      # admin dashboard
 │   │   ├── login.ts      # the login screen (student / admin / practice mode)
 │   │   └── hub.ts        # the Game Hub screen (now with a user chip + Log out)
 │   ├── games/
@@ -351,7 +362,7 @@ automated test suite (see [How this was tested](#how-this-was-tested)). The logi
 result-saving behaviour below the line was checked with throwaway harnesses, not in a browser.
 
 * [ ] Student login with a seeded LRN reaches the hub and shows the name in the top bar
-* [ ] Unknown LRN and incomplete LRN show a readable error and send no request
+* [ ] Unknown LRN and incomplete LRN show a readable error; incomplete LRNs send no request
 * [ ] Admin login works, saves no rounds, and Log out returns to the login screen
 * [ ] Refreshing the page keeps you logged in (`GET /api/me`); restarting the API does not
 * [ ] `#bingo` while logged out → login screen → back to Bingo after logging in

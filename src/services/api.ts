@@ -129,6 +129,22 @@ export interface SaveResultResponse {
   result: GameResult;
 }
 
+/** Admin roster fields returned by GET /admin/students. */
+export interface AdminStudent {
+  lrn: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  gradeLevel: string;
+  section: string;
+}
+
+export interface AdminSummary {
+  ok: true;
+  students: number;
+  results: { rounds: number; averagePercent: number };
+}
+
 export interface ResultsResponse {
   ok: true;
   count: number;
@@ -320,8 +336,8 @@ export const api = {
     return request<ResultsResponse>(`/me/results?${params.toString()}`);
   },
 
-  /* ---------- admin (used by the admin dashboard, the next phase) ---------- */
-  adminStudents(search?: string): Promise<{ ok: true; count: number; students: unknown[] }> {
+  /* ---------- admin dashboard ---------- */
+  adminStudents(search?: string): Promise<{ ok: true; count: number; students: AdminStudent[] }> {
     const query = search ? `?search=${encodeURIComponent(search)}` : '';
     return request(`/admin/students${query}`);
   },
@@ -331,7 +347,7 @@ export const api = {
     return request<ResultsResponse>(`/admin/results${query}`);
   },
 
-  adminSummary(): Promise<unknown> {
-    return request('/admin/summary');
+  adminSummary(): Promise<AdminSummary> {
+    return request<AdminSummary>('/admin/summary');
   },
 };

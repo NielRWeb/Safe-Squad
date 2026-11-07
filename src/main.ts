@@ -15,6 +15,7 @@ import '../styles/main.css';
 import { el } from './utils/dom';
 import { Router } from './core/router';
 import { createLoginScene } from './components/login';
+import { createAdminScene } from './components/admin';
 import { createHubScene } from './components/hub';
 import { createBabyCryScene } from './games/babyCry';
 import { createPuzzleScene } from './games/puzzle';
@@ -52,6 +53,7 @@ async function boot(): Promise<void> {
   const router = new Router(mount);
   router.register('login', createLoginScene);
   router.register('hub', createHubScene);
+  router.register('admin', createAdminScene);
   router.register('babyCry', createBabyCryScene);
   router.register('puzzle', createPuzzleScene);
   router.register('factFall', createFactFallScene);
