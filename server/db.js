@@ -14,6 +14,7 @@
  * =============================================================================
  */
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import mysql from 'mysql2/promise';
@@ -35,12 +36,24 @@ dotenv.config({ path: envPath, quiet: true });
  * still start on a fresh clone that has no `.env` yet — it just reports that the
  * database is unreachable instead of crashing.
  */
+const sslSetting = process.env.DB_SSL || 'false';
+if (!['true', 'false'].includes(sslSetting)) {
+  throw new Error('DB_SSL must be true or false.');
+}
+// Certificate verification remains enabled. Without a custom CA, Node's
+// standard trusted roots are used; an unreadable CA file fails at startup.
+const ssl = sslSetting === 'true'
+  ? { minVersion: 'TLSv1.2', rejectUnauthorized: true,
+      ...(process.env.DB_SSL_CA_PATH ? { ca: fs.readFileSync(process.env.DB_SSL_CA_PATH, 'utf8') } : {}) }
+  : undefined;
+
 export const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'safe_squad',
+  ...(ssl ? { ssl } : {}),
 };
 
 /** Which settings are still missing? Used only to print a friendly hint. */

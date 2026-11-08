@@ -23,6 +23,8 @@
  * =============================================================================
  */
 import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { dbConfig, missingEnvVars, pingDatabase, isDbError, explainDbError, closePool, query } from './db.js';
 import { attachSession, activeSessionCount } from './session.js';
 import { production, securityHeaders, csrfGuard, limitAdminLogin } from './security.js';
@@ -55,6 +57,23 @@ app.disable('x-powered-by');
 // API security headers and strict same-origin production policy.
 app.use(securityHeaders);
 app.use(csrfGuard);
+
+// In production, serve the built frontend from the same origin as the API.
+// Keep /api reserved for the API and leave the hash router to the browser.
+// The API's default-src 'none' CSP must be replaced for frontend documents.
+if (production) {
+  const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
+  const staticFiles = express.static(dist, {
+    setHeaders(res) {
+      res.setHeader('Content-Security-Policy',
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'");
+    },
+  });
+  app.use((req, res, next) => {
+    if (/^\/api(?:\/|$)/i.test(req.path)) return next();
+    return staticFiles(req, res, next);
+  });
+}
 app.post('/api/auth/admin-login', limitAdminLogin);
 app.use(express.json({ limit: '32kb' }));
 app.use((req, res, next) => {
